@@ -247,6 +247,7 @@ const crearNuevaGestion = () => {
                         size="small"
                         severity="primary"
                         @click="abrirModalNuevoParalelo()"
+                        class="!bg-gradient-to-r !from-pink-500 !to-rose-600 !border-0 font-bold shadow-md shadow-pink-500/25"
                     />
                 </div>
             </div>

@@ -1,3 +1,79 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ==========================================================================
+   SUPPRESS PRIMEUI LICENSE WATERMARK / BANNER
+   ========================================================================== */
+[class*="primeui-license"],
+[class*="p-license"],
+div[style*="z-index: 999999"],
+div[style*="z-index: 9999999"],
+div:has(> a[href*="primeui.dev"]),
+div:has(> a[href*="primestore"]),
+div:has(> [href*="primeui"]),
+.p-license-watermark,
+.p-license-container {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
+    top: -9999px !important;
+    left: -9999px !important;
+}
+
+/* ==========================================================================
+   ANIMATED SVG CONNECTOR FLOWS & SCROLLBAR
+   ========================================================================== */
+@keyframes flowDashForward {
+    from {
+        stroke-dashoffset: 24;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes pulseGlow {
+    0%, 100% {
+        filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.7));
+    }
+    50% {
+        filter: drop-shadow(0 0 9px rgba(59, 130, 246, 1));
+    }
+}
+
+.animate-flow-dash {
+    stroke-dasharray: 8 4;
+    animation: flowDashForward 0.8s linear infinite;
+}
+
+.animate-flow-unlocked {
+    stroke-dasharray: 8 4;
+    animation: flowDashForward 0.8s linear infinite;
+    filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.8));
+}
+
+.animate-glow-req {
+    filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.8));
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #ec4899, #f43f5e);
+    border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #db2777, #e11d48);
+}

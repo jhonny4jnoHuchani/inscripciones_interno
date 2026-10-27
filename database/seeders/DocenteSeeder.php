@@ -64,6 +64,28 @@ class DocenteSeeder extends Seeder
         );
         $kardexUser->syncRoles(['Encargado de Kardex']);
 
+        $admisionUser = User::firstOrCreate(
+            ['email' => 'admisiones@academico.test'],
+            [
+                'name' => 'Ing. Roberto Paz (Encargado de Admisiones)',
+                'ci' => '10000005',
+                'password' => bcrypt('password'),
+                'carrera_id' => $carreraSistemas?->id,
+            ]
+        );
+        $admisionUser->syncRoles(['Encargado de Kardex']);
+
+        $comisionUser = User::firstOrCreate(
+            ['email' => 'comision@academico.test'],
+            [
+                'name' => 'Lic. Elena Arze (Comisión Académica)',
+                'ci' => '10000006',
+                'password' => bcrypt('password'),
+                'carrera_id' => $carreraSistemas?->id,
+            ]
+        );
+        $comisionUser->syncRoles(['Comisión Académica']);
+
         // 2. Docentes Especialistas (12 docentes)
         $docentesData = [
             [

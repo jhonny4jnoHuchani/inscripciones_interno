@@ -312,7 +312,7 @@ const guardarNuevoPermiso = () => {
                         severity="primary"
                         size="small"
                         @click="abrirModalPostulante"
-                        class="shadow-sm"
+                        class="shadow-md !bg-gradient-to-r !from-pink-500 !to-rose-600 !border-0 font-bold"
                     />
                 </div>
             </div>

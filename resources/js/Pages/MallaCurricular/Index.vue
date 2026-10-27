@@ -23,8 +23,8 @@ const props = defineProps({
 // Referencias del DOM para calcular flechas SVG
 const containerRef = ref(null);
 const lineasSvg = ref([]);
-const svgWidth = ref(2000);
-const svgHeight = ref(1000);
+const svgWidth = ref(2400);
+const svgHeight = ref(1200);
 
 // Estado de materias local para reactividad inmediata sin parpadeos
 const materiasLocales = ref([...(props.carreraActiva?.materias || [])]);
@@ -35,8 +35,17 @@ watch(() => props.carreraActiva, (newVal) => {
     nextTick(() => recalcularFlechas());
 }, { deep: true });
 
-// Materia actualmente seleccionada para resaltar flujo
+// Materia actualmente inspeccionada (click) o previsualizada (hover)
 const materiaSeleccionada = ref(null);
+const materiaHover = ref(null);
+const modoArbolCompleto = ref(false);
+
+// Filtro de búsqueda y área
+const busqueda = ref('');
+const filtroArea = ref('todas');
+
+// Materia activa para el trazado de relaciones (hover prioritario sobre click)
+const materiaActiva = computed(() => materiaHover.value || materiaSeleccionada.value);
 
 // Modo Enlace de Requisitos
 const modoEnlace = ref(false);
@@ -55,7 +64,92 @@ const materiaForm = ref({
 });
 
 // Niveles organizados en columnas
-const totalNiveles = computed(() => props.carreraActiva?.total_niveles || 10);
+const totalNiveles = computed(() => props.carreraActiva?.total_niveles || 9);
+
+// Mapeo inteligente de área académica según la sigla y nombre de la materia
+const getAreaInfo = (materia) => {
+    const s = materia.sigla?.toUpperCase() || '';
+    const n = materia.nombre?.toLowerCase() || '';
+
+    if (s.startsWith('MAT') || s.startsWith('ALG') || n.includes('cálculo') || n.includes('álgebra') || n.includes('ecuacion') || n.includes('estadística') || n.includes('numérico')) {
+        return {
+            nombre: 'Matemáticas y Ciencias',
+            badgeBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+            headerGradient: 'from-emerald-500 to-teal-600',
+            borderAccent: 'border-l-4 border-l-emerald-500',
+            icon: 'pi pi-calculator',
+            glowColor: '#10b981',
+        };
+    }
+    if (s.startsWith('SIS-10') || s.startsWith('SIS-201') || s.startsWith('SIS-203') || s.startsWith('SIS-306') || s.startsWith('INF-10') || s.startsWith('INF-20') || n.includes('programación') || n.includes('estructura de datos')) {
+        return {
+            nombre: 'Programación y Algoritmos',
+            badgeBg: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
+            headerGradient: 'from-indigo-600 to-violet-600',
+            borderAccent: 'border-l-4 border-l-indigo-500',
+            icon: 'pi pi-code',
+            glowColor: '#6366f1',
+        };
+    }
+    if (s.startsWith('FIS') || s.startsWith('SIS-202') || s.startsWith('SIS-502') || n.includes('física') || n.includes('arquitectura') || n.includes('robótica')) {
+        return {
+            nombre: 'Física y Hardware',
+            badgeBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30',
+            headerGradient: 'from-amber-500 to-orange-500',
+            borderAccent: 'border-l-4 border-l-amber-500',
+            icon: 'pi pi-bolt',
+            glowColor: '#f59e0b',
+        };
+    }
+    if (s.startsWith('TEL') || s.startsWith('SIS-403') || n.includes('redes') || n.includes('seguridad') || n.includes('comunicacion')) {
+        return {
+            nombre: 'Redes y Telecomunicaciones',
+            badgeBg: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30',
+            headerGradient: 'from-sky-500 to-blue-600',
+            borderAccent: 'border-l-4 border-l-sky-500',
+            icon: 'pi pi-wifi',
+            glowColor: '#0ea5e9',
+        };
+    }
+    if (s.startsWith('SIS-301') || s.startsWith('SIS-304') || s.startsWith('SIS-302') || n.includes('base de datos') || n.includes('sistemas operativos') || n.includes('big data')) {
+        return {
+            nombre: 'Bases de Datos y SO',
+            badgeBg: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/30',
+            headerGradient: 'from-cyan-500 to-teal-600',
+            borderAccent: 'border-l-4 border-l-cyan-500',
+            icon: 'pi pi-database',
+            glowColor: '#06b6d4',
+        };
+    }
+    if (s.startsWith('SIS-40') || s.startsWith('SIS-303') || s.startsWith('SIS-305') || s.startsWith('SIS-307') || n.includes('software') || n.includes('diseño de sistemas') || n.includes('gerencial') || n.includes('operativa')) {
+        return {
+            nombre: 'Ingeniería de Software',
+            badgeBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30',
+            headerGradient: 'from-purple-600 to-pink-600',
+            borderAccent: 'border-l-4 border-l-purple-500',
+            icon: 'pi pi-server',
+            glowColor: '#a855f7',
+        };
+    }
+    if (s.startsWith('SIS-5') || n.includes('taller') || n.includes('grado') || n.includes('inteligencia artificial') || n.includes('práctica')) {
+        return {
+            nombre: 'IA y Titulación',
+            badgeBg: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30',
+            headerGradient: 'from-rose-500 to-pink-600',
+            borderAccent: 'border-l-4 border-l-rose-500',
+            icon: 'pi pi-graduation-cap',
+            glowColor: '#f43f5e',
+        };
+    }
+    return {
+        nombre: 'Formación Complementaria',
+        badgeBg: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/30',
+        headerGradient: 'from-slate-600 to-gray-700',
+        borderAccent: 'border-l-4 border-l-slate-400',
+        icon: 'pi pi-book',
+        glowColor: '#64748b',
+    };
+};
 
 const materiasPorNivel = computed(() => {
     const agrupadas = {};
@@ -72,27 +166,70 @@ const materiasPorNivel = computed(() => {
     return agrupadas;
 });
 
-// IDs de requisitos de la materia seleccionada (hacia atrás)
-const idsRequisitosSeleccionada = computed(() => {
-    if (!materiaSeleccionada.value) return new Set();
+// Función para obtener el árbol genealógico completo (recursivo)
+const getAncestrosRecursivos = (materiaId, visitados = new Set()) => {
+    if (visitados.has(materiaId)) return visitados;
+    visitados.add(materiaId);
+    const m = materiasLocales.value.find(mat => mat.id === materiaId);
+    if (m?.requisitos) {
+        m.requisitos.forEach(r => getAncestrosRecursivos(r.id, visitados));
+    }
+    return visitados;
+};
+
+const getDescendientesRecursivos = (materiaId, visitados = new Set()) => {
+    if (visitados.has(materiaId)) return visitados;
+    visitados.add(materiaId);
+    materiasLocales.value.forEach(m => {
+        if (m.requisitos?.some(r => r.id === materiaId)) {
+            getDescendientesRecursivos(m.id, visitados);
+        }
+    });
+    return visitados;
+};
+
+// IDs de requisitos de la materia activa (hacia atrás)
+const idsRequisitosActiva = computed(() => {
+    if (!materiaActiva.value) return new Set();
+    if (modoArbolCompleto.value) {
+        const full = getAncestrosRecursivos(materiaActiva.value.id);
+        full.delete(materiaActiva.value.id);
+        return full;
+    }
     const reqs = new Set();
-    const materia = materiasLocales.value.find(m => m.id === materiaSeleccionada.value.id);
+    const materia = materiasLocales.value.find(m => m.id === materiaActiva.value.id);
     if (materia?.requisitos) {
         materia.requisitos.forEach(r => reqs.add(r.id));
     }
     return reqs;
 });
 
-// IDs de materias que tienen a la materia seleccionada como requisito (hacia adelante)
-const idsDesbloqueadasSeleccionada = computed(() => {
-    if (!materiaSeleccionada.value) return new Set();
+// IDs de materias que tienen a la materia activa como requisito (hacia adelante)
+const idsDesbloqueadasActiva = computed(() => {
+    if (!materiaActiva.value) return new Set();
+    if (modoArbolCompleto.value) {
+        const full = getDescendientesRecursivos(materiaActiva.value.id);
+        full.delete(materiaActiva.value.id);
+        return full;
+    }
     const desbloqueadas = new Set();
     materiasLocales.value.forEach(m => {
-        if (m.requisitos?.some(r => r.id === materiaSeleccionada.value.id)) {
+        if (m.requisitos?.some(r => r.id === materiaActiva.value.id)) {
             desbloqueadas.add(m.id);
         }
     });
     return desbloqueadas;
+});
+
+// Lista de objetos Materia para el HUD Inspector
+const listaRequisitosActiva = computed(() => {
+    if (!materiaActiva.value) return [];
+    return materiasLocales.value.filter(m => idsRequisitosActiva.value.has(m.id));
+});
+
+const listaDesbloqueadasActiva = computed(() => {
+    if (!materiaActiva.value) return [];
+    return materiasLocales.value.filter(m => idsDesbloqueadasActiva.value.has(m.id));
 });
 
 // Calcular las coordenadas exactas de las flechas SVG entre tarjetas
@@ -104,7 +241,7 @@ const recalcularFlechas = () => {
     const scrollLeft = container.scrollLeft;
     const scrollTop = container.scrollTop;
 
-    // Actualizar dimensiones del SVG para cubrir todo el scroll
+    // Actualizar dimensiones del SVG para cubrir todo el lienzo
     svgWidth.value = Math.max(container.scrollWidth, container.clientWidth);
     svgHeight.value = Math.max(container.scrollHeight, container.clientHeight);
 
@@ -128,17 +265,20 @@ const recalcularFlechas = () => {
             const xOrigen = rectOrigen.right - containerRect.left + scrollLeft;
             const yOrigen = rectOrigen.top + (rectOrigen.height / 2) - containerRect.top + scrollTop;
 
-            // Curva de Bézier cúbica suave
-            const dx = Math.max(30, (xDestino - xOrigen) / 2);
+            // Curva de Bézier cúbica suave con punto de control adaptativo
+            const dx = Math.max(40, (xDestino - xOrigen) / 2);
             const pathData = `M ${xOrigen} ${yOrigen} C ${xOrigen + dx} ${yOrigen}, ${xDestino - dx} ${yDestino}, ${xDestino} ${yDestino}`;
 
             // Determinar estado de resaltado
             let tipoResaltado = 'normal';
-            if (materiaSeleccionada.value) {
-                if (materia.id === materiaSeleccionada.value.id) {
-                    tipoResaltado = 'requisito-previo'; // Viene de un requisito previo
-                } else if (req.id === materiaSeleccionada.value.id) {
-                    tipoResaltado = 'desbloqueada'; // Desbloquea a la materia
+            if (materiaActiva.value) {
+                const esReqDirecto = (materia.id === materiaActiva.value.id && req.id === materiaActiva.value.id) || (materia.id === materiaActiva.value.id);
+                const esDesbloqueoDirecto = (req.id === materiaActiva.value.id);
+
+                if (esReqDirecto || (modoArbolCompleto.value && idsRequisitosActiva.value.has(req.id) && idsRequisitosActiva.value.has(materia.id))) {
+                    tipoResaltado = 'requisito-previo'; // Viene de requisito obligatorio (Azul)
+                } else if (esDesbloqueoDirecto || (modoArbolCompleto.value && idsDesbloqueadasActiva.value.has(req.id) && idsDesbloqueadasActiva.value.has(materia.id))) {
+                    tipoResaltado = 'desbloqueada'; // Desbloquea materias futuras (Verde)
                 } else {
                     tipoResaltado = 'atenuado';
                 }
@@ -174,6 +314,32 @@ const seleccionarMateria = (materia) => {
         materiaSeleccionada.value = materia;
     }
     nextTick(() => recalcularFlechas());
+};
+
+const entrarHover = (materia) => {
+    if (!modoEnlace.value) {
+        materiaHover.value = materia;
+        nextTick(() => recalcularFlechas());
+    }
+};
+
+const salirHover = () => {
+    if (!modoEnlace.value) {
+        materiaHover.value = null;
+        nextTick(() => recalcularFlechas());
+    }
+};
+
+const enfocarMateria = (materiaId) => {
+    const m = materiasLocales.value.find(item => item.id === materiaId);
+    if (m) {
+        materiaSeleccionada.value = m;
+        const el = document.getElementById(`card-materia-${materiaId}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+        }
+        nextTick(() => recalcularFlechas());
+    }
 };
 
 const iniciarModoEnlace = (materia, event) => {
@@ -273,6 +439,14 @@ const cambiarCarrera = (id) => {
     router.get(route('malla-curricular.index', { carrera_id: id }));
 };
 
+// Título de la etapa de carrera según el nivel
+const getEtapaNivel = (nivel) => {
+    if (nivel <= 2) return { nombre: 'Ciclo Básico / Fundamentos', grad: 'from-blue-600 to-indigo-600' };
+    if (nivel <= 5) return { nombre: 'Ciclo Formativo Central', grad: 'from-indigo-600 to-purple-600' };
+    if (nivel <= 7) return { nombre: 'Ciclo de Especialidad', grad: 'from-purple-600 to-pink-600' };
+    return { nombre: 'Graduación y Titulación', grad: 'from-pink-600 to-rose-600' };
+};
+
 // Lifecycle
 onMounted(() => {
     nextTick(() => {
@@ -291,29 +465,29 @@ onUnmounted(() => {
 
     <AuthenticatedLayout>
         <template #header>
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <div class="flex items-center gap-3">
-                        <span class="px-2.5 py-1 bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold rounded-lg text-sm border border-indigo-200 dark:border-indigo-800">
-                            {{ carreraActiva?.codigo }}
-                        </span>
-                        <h2 class="text-xl font-bold leading-tight text-gray-800 dark:text-gray-100">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="px-3 py-1 rounded-xl bg-pink-500/20 text-pink-600 dark:text-pink-400 font-mono font-black text-xs border border-pink-500/30">
+                        {{ carreraActiva?.codigo }}
+                    </span>
+                    <div>
+                        <h2 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">
                             Malla Curricular: {{ carreraActiva?.nombre }}
                         </h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Grafo interactivo de pre-requisitos con trazado vectorial dinámico.
+                        </p>
                     </div>
-                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Organización dinámica por niveles y mapa de pre-requisitos con flechas de flujo.
-                    </p>
                 </div>
 
-                <!-- Selector de Carrera y Botón Rápido -->
-                <div class="flex items-center gap-3">
+                <!-- SELECTOR DE CARRERA Y ACCIONES -->
+                <div class="flex flex-wrap items-center gap-3">
                     <div v-if="carreras.length > 1" class="flex items-center gap-2">
-                        <label class="text-xs font-semibold text-gray-600 dark:text-gray-300">Carrera:</label>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Carrera:</label>
                         <select
                             :value="carreraActiva?.id"
                             @change="cambiarCarrera($event.target.value)"
-                            class="text-xs rounded-lg border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 py-1.5 px-3 focus:ring-indigo-500"
+                            class="text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 py-1.5 px-3 focus:ring-2 focus:ring-pink-500 font-semibold shadow-xs"
                         >
                             <option v-for="c in carreras" :key="c.id" :value="c.id">
                                 {{ c.codigo }} - {{ c.nombre }}
@@ -327,69 +501,173 @@ onUnmounted(() => {
                         size="small"
                         severity="primary"
                         @click="abrirModalNueva(1)"
+                        class="shadow-md !bg-gradient-to-r !from-pink-500 !to-rose-600 !border-0 font-bold"
                     />
                 </div>
             </div>
         </template>
 
-        <div class="py-6 px-4 sm:px-6 lg:px-8">
-            <!-- Barra de Herramientas y Leyenda Interactiva -->
-            <div class="mb-4 bg-white dark:bg-gray-800 rounded-xl p-3 shadow-xs border border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3 text-xs">
-                <!-- Leyenda de colores -->
-                <div class="flex items-center gap-4 flex-wrap">
-                    <span class="font-semibold text-gray-700 dark:text-gray-300">Leyenda interactiva:</span>
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                        <span class="text-gray-600 dark:text-gray-400">Pre-requisitos previos (Aprobación obligatoria)</span>
+        <div class="py-6 px-4 sm:px-6 lg:px-8 space-y-4">
+            <!-- 1. HUD INSPECTOR INTERACTIVO DE RELACIONES (VITAL PARA LA FÁCIL INTUICIÓN) -->
+            <div
+                v-if="materiaActiva"
+                class="p-4 rounded-2xl bg-white dark:bg-[#111827] border-2 border-indigo-500/40 dark:border-indigo-500/30 shadow-2xl transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+            >
+                <div class="flex items-center gap-3.5">
+                    <div
+                        :class="[
+                            'w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg bg-gradient-to-tr font-black',
+                            getAreaInfo(materiaActiva).headerGradient
+                        ]"
+                    >
+                        <i :class="[getAreaInfo(materiaActiva).icon, 'text-xl']"></i>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-                        <span class="text-gray-600 dark:text-gray-400">Materias desbloqueadas a futuro</span>
-                    </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                        <span class="text-gray-600 dark:text-gray-400">Nota 51 / 61</span>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 rounded-md font-mono font-bold text-xs bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white">
+                                {{ materiaActiva.sigla }}
+                            </span>
+                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                                {{ materiaActiva.nivel }}º Semestre
+                            </span>
+                        </div>
+                        <h3 class="text-base font-black text-slate-900 dark:text-white mt-0.5">
+                            {{ materiaActiva.nombre }}
+                        </h3>
                     </div>
                 </div>
 
-                <!-- Estado del modo enlace -->
-                <div v-if="modoEnlace" class="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/80 px-3 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 animate-pulse">
-                    <i class="pi pi-link"></i>
-                    <span class="font-medium">
-                        Selecciona el pre-requisito para <strong>{{ materiaOrigenEnlace?.sigla }}</strong>
-                    </span>
-                    <button @click="cancelarModoEnlace" class="ml-2 text-red-500 hover:text-red-700 font-bold">
-                        Cancelar
-                    </button>
+                <!-- Requisitos y Desbloqueos en Pills Interactivos -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 flex-1 lg:justify-center">
+                    <!-- Requisitos Previos -->
+                    <div class="space-y-1">
+                        <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                            <i class="pi pi-arrow-left text-[9px]"></i> Requisitos Previos ({{ listaRequisitosActiva.length }}):
+                        </span>
+                        <div class="flex flex-wrap gap-1">
+                            <button
+                                v-for="req in listaRequisitosActiva"
+                                :key="req.id"
+                                @click="enfocarMateria(req.id)"
+                                class="px-2 py-1 rounded-lg text-xs font-mono font-bold bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors cursor-pointer"
+                                :title="req.nombre"
+                            >
+                                {{ req.sigla }} ({{ req.nivel }}º)
+                            </button>
+                            <span v-if="listaRequisitosActiva.length === 0" class="text-xs text-slate-400 italic">
+                                Ninguno (Nivel inicial)
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="hidden sm:block h-8 w-px bg-slate-200 dark:bg-slate-700"></div>
+
+                    <!-- Materias Desbloqueadas a Futuro -->
+                    <div class="space-y-1">
+                        <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                            Desbloquea a futuro ({{ listaDesbloqueadasActiva.length }}): <i class="pi pi-arrow-right text-[9px]"></i>
+                        </span>
+                        <div class="flex flex-wrap gap-1">
+                            <button
+                                v-for="des in listaDesbloqueadasActiva"
+                                :key="des.id"
+                                @click="enfocarMateria(des.id)"
+                                class="px-2 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                :title="des.nombre"
+                            >
+                                {{ des.sigla }} ({{ des.nivel }}º)
+                            </button>
+                            <span v-if="listaDesbloqueadasActiva.length === 0" class="text-xs text-slate-400 italic">
+                                Último nivel / Terminal
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <div v-else class="text-gray-400 dark:text-gray-500 text-[11px]">
-                    <i class="pi pi-info-circle mr-1"></i> Haz clic en cualquier materia para iluminar su ruta de requisitos
+
+                <!-- Controles del Inspector -->
+                <div class="flex items-center gap-2 self-end lg:self-center">
+                    <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            v-model="modoArbolCompleto"
+                            @change="nextTick(() => recalcularFlechas())"
+                            class="rounded border-slate-300 text-pink-600 focus:ring-pink-500"
+                        />
+                        <span>Ruta Completa (Árbol)</span>
+                    </label>
+
+                    <Button
+                        icon="pi pi-times"
+                        severity="secondary"
+                        text
+                        rounded
+                        size="small"
+                        @click="materiaSeleccionada = null; materiaHover = null; nextTick(() => recalcularFlechas())"
+                        title="Limpiar inspección"
+                    />
                 </div>
             </div>
 
-            <!-- LIENZO PRINCIPAL CON SCROLL HORIZONTAL Y FLECHAS SVG -->
+            <!-- 2. BARRA DE HERRAMIENTAS Y LEYENDA ULTRA INTUITIVA -->
+            <div class="bg-white dark:bg-[#111827] rounded-2xl p-3.5 shadow-md border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <!-- Leyenda de colores con alto contraste -->
+                <div class="flex items-center gap-4 flex-wrap">
+                    <span class="font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider text-[11px]">
+                        Flujo de Relaciones:
+                    </span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3.5 h-3.5 rounded-full bg-blue-500 ring-4 ring-blue-500/20"></span>
+                        <span class="font-bold text-blue-600 dark:text-blue-400">Requisito Previo Obligatorio (⬅️ Entrante)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
+                        <span class="font-bold text-emerald-600 dark:text-emerald-400">Materia Desbloqueada (➡️ Saliente)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-slate-400"></span>
+                        <span class="text-slate-500 dark:text-slate-400">Ruta General</span>
+                    </div>
+                </div>
+
+                <!-- Estado del modo enlace interactivo -->
+                <div v-if="modoEnlace" class="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/80 px-3.5 py-1.5 rounded-xl border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 animate-pulse font-bold">
+                    <i class="pi pi-link"></i>
+                    <span>
+                        Haz clic en el pre-requisito para vincular a <strong>{{ materiaOrigenEnlace?.sigla }}</strong>
+                    </span>
+                    <button @click="cancelarModoEnlace" class="ml-2 text-rose-600 hover:text-rose-700 font-black">
+                        Cancelar
+                    </button>
+                </div>
+                <div v-else class="text-slate-400 dark:text-slate-500 text-[11px] flex items-center gap-1.5">
+                    <i class="pi pi-info-circle text-indigo-500"></i>
+                    Pasa el cursor por cualquier tarjeta para <strong>iluminar su ruta en azul y verde</strong>.
+                </div>
+            </div>
+
+            <!-- 3. LIENZO PRINCIPAL CON SCROLL HORIZONTAL Y FLECHAS SVG -->
             <div
                 ref="containerRef"
                 @scroll="recalcularFlechas"
-                class="relative overflow-x-auto overflow-y-hidden bg-slate-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-800 p-6 min-h-[650px] shadow-inner select-none transition-colors"
+                class="relative overflow-x-auto overflow-y-hidden bg-slate-100/70 dark:bg-[#070b13] rounded-3xl border border-slate-200 dark:border-slate-800 p-6 min-h-[720px] shadow-2xl select-none custom-scrollbar transition-colors"
             >
-                <!-- CAPA SVG DE FLECHAS DINÁMICAS -->
+                <!-- CAPA SVG DE FLECHAS DINÁMICAS (ALTO IMPACTO Y CONTRASTE) -->
                 <svg
                     class="absolute inset-0 pointer-events-none z-10"
                     :style="{ width: `${svgWidth}px`, height: `${svgHeight}px` }"
                 >
                     <defs>
-                        <!-- Marcador de flecha normal -->
-                        <marker id="arrow-normal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                            <path d="M 0 1 L 9 5 L 0 9 z" fill="#94a3b8" />
+                        <!-- Marcador de flecha normal (Visible y nítida) -->
+                        <marker id="arrow-normal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                            <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b" />
                         </marker>
-                        <!-- Marcador de flecha requisito previo (Azul) -->
-                        <marker id="arrow-previo" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                        <!-- Marcador de flecha requisito previo (Azul Eléctrico) -->
+                        <marker id="arrow-previo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
                             <path d="M 0 1 L 9 5 L 0 9 z" fill="#3b82f6" />
                         </marker>
-                        <!-- Marcador de flecha desbloqueada (Ámbar / Naranja) -->
-                        <marker id="arrow-desbloqueada" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                            <path d="M 0 1 L 9 5 L 0 9 z" fill="#f59e0b" />
+                        <!-- Marcador de flecha desbloqueada (Verde Esmeralda) -->
+                        <marker id="arrow-desbloqueada" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+                            <path d="M 0 1 L 9 5 L 0 9 z" fill="#10b981" />
                         </marker>
                     </defs>
 
@@ -400,20 +678,28 @@ onUnmounted(() => {
                             fill="none"
                             :stroke="
                                 linea.tipoResaltado === 'requisito-previo' ? '#3b82f6' :
-                                linea.tipoResaltado === 'desbloqueada' ? '#f59e0b' :
-                                '#cbd5e1'
+                                linea.tipoResaltado === 'desbloqueada' ? '#10b981' :
+                                '#64748b'
                             "
                             :stroke-width="
-                                linea.tipoResaltado === 'requisito-previo' || linea.tipoResaltado === 'desbloqueada' ? '3' : '1.5'
+                                linea.tipoResaltado === 'requisito-previo' || linea.tipoResaltado === 'desbloqueada' ? '3.5' : '1.8'
                             "
-                            :stroke-dasharray="linea.tipoResaltado === 'desbloqueada' ? '4 3' : 'none'"
-                            :opacity="linea.tipoResaltado === 'atenuado' ? '0.12' : '1'"
+                            :stroke-dasharray="
+                                linea.tipoResaltado === 'requisito-previo' || linea.tipoResaltado === 'desbloqueada' ? '8 4' : 'none'
+                            "
+                            :opacity="
+                                linea.tipoResaltado === 'atenuado' ? '0.04' :
+                                linea.tipoResaltado === 'normal' ? '0.45' : '1'
+                            "
                             :marker-end="
                                 linea.tipoResaltado === 'requisito-previo' ? 'url(#arrow-previo)' :
                                 linea.tipoResaltado === 'desbloqueada' ? 'url(#arrow-desbloqueada)' :
                                 'url(#arrow-normal)'
                             "
-                            class="transition-all duration-300"
+                            :class="[
+                                'transition-all duration-300',
+                                (linea.tipoResaltado === 'requisito-previo' || linea.tipoResaltado === 'desbloqueada') ? 'animate-flow-dash' : ''
+                            ]"
                         />
                     </g>
                 </svg>
@@ -423,16 +709,21 @@ onUnmounted(() => {
                     <div
                         v-for="nivel in totalNiveles"
                         :key="nivel"
-                        class="w-64 shrink-0 flex flex-col bg-white/80 dark:bg-gray-800/80 backdrop-blur-xs rounded-xl border border-gray-200/90 dark:border-gray-700/80 shadow-xs"
+                        class="w-72 shrink-0 flex flex-col bg-white/90 dark:bg-[#111827]/90 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-xl"
                     >
-                        <!-- Header de la Columna / Nivel -->
-                        <div class="p-3 border-b border-gray-100 dark:border-gray-700/80 flex items-center justify-between bg-gray-50/70 dark:bg-gray-800/90 rounded-t-xl">
+                        <!-- Header de la Columna / Nivel con Gradiente -->
+                        <div class="p-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between rounded-t-2xl bg-gradient-to-r from-slate-50 to-white dark:from-slate-800/80 dark:to-slate-800/40">
                             <div>
-                                <h3 class="font-bold text-sm text-gray-800 dark:text-gray-100">
-                                    {{ nivel }}º Nivel
-                                </h3>
-                                <span class="text-[11px] text-gray-500 dark:text-gray-400">
-                                    {{ materiasPorNivel[nivel]?.length || 0 }} materias
+                                <div class="flex items-center gap-2">
+                                    <h3 class="font-black text-sm text-slate-800 dark:text-white">
+                                        {{ nivel }}º Semestre
+                                    </h3>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-pink-500/10 text-pink-600 dark:text-pink-400">
+                                        {{ materiasPorNivel[nivel]?.length || 0 }}
+                                    </span>
+                                </div>
+                                <span class="text-[10px] text-slate-400 font-medium block mt-0.5">
+                                    {{ getEtapaNivel(nivel).nombre }}
                                 </span>
                             </div>
                             <Button
@@ -443,205 +734,172 @@ onUnmounted(() => {
                                 severity="secondary"
                                 title="Agregar materia en este nivel"
                                 @click="abrirModalNueva(nivel)"
-                                class="!w-7 !h-7 !p-0"
+                                class="!w-8 !h-8 !p-0 hover:!bg-pink-500 hover:!text-white transition-colors"
                             />
                         </div>
 
                         <!-- Lista de Tarjetas de Materia del Nivel -->
-                        <div class="p-3 flex flex-col gap-3 min-h-[480px]">
+                        <div class="p-3 space-y-3.5 flex-1 min-h-[480px]">
                             <div
                                 v-for="materia in materiasPorNivel[nivel]"
                                 :key="materia.id"
                                 :id="`card-materia-${materia.id}`"
                                 @click="seleccionarMateria(materia)"
+                                @mouseenter="entrarHover(materia)"
+                                @mouseleave="salirHover"
                                 :class="[
-                                    'group relative rounded-xl p-3 border transition-all duration-200 cursor-pointer shadow-xs',
-                                    // Resaltado de selección
-                                    materiaSeleccionada?.id === materia.id
-                                        ? 'bg-indigo-50/90 dark:bg-indigo-950/70 border-indigo-500 dark:border-indigo-400 ring-2 ring-indigo-400/50 shadow-md'
-                                        : idsRequisitosSeleccionada.has(materia.id)
-                                        ? 'bg-blue-50/90 dark:bg-blue-950/70 border-blue-500 dark:border-blue-400 ring-2 ring-blue-400/40 shadow-md'
-                                        : idsDesbloqueadasSeleccionada.has(materia.id)
-                                        ? 'bg-amber-50/90 dark:bg-amber-950/70 border-amber-500 dark:border-amber-400 ring-2 ring-amber-400/40 shadow-md'
-                                        : materiaSeleccionada
-                                        ? 'bg-white/60 dark:bg-gray-800/40 border-gray-200/60 dark:border-gray-700/40 opacity-40 hover:opacity-90'
-                                        : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-md',
-                                    // Modo enlace activo
-                                    modoEnlace && materiaOrigenEnlace?.id === materia.id
-                                        ? 'ring-2 ring-purple-500 animate-pulse'
-                                        : ''
+                                    'group relative rounded-2xl p-3.5 transition-all duration-200 cursor-pointer shadow-md select-none border',
+                                    // Acentos de área
+                                    getAreaInfo(materia).borderAccent,
+
+                                    // Estado Seleccionada / Hover activa
+                                    materiaActiva?.id === materia.id
+                                        ? 'ring-3 ring-pink-500 bg-white dark:bg-slate-800 shadow-2xl scale-[1.03] z-30'
+                                        : idsRequisitosActiva.has(materia.id)
+                                        ? 'ring-2 ring-blue-500 bg-blue-50/90 dark:bg-blue-950/60 shadow-xl scale-[1.01] z-20'
+                                        : idsDesbloqueadasActiva.has(materia.id)
+                                        ? 'ring-2 ring-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/60 shadow-xl scale-[1.01] z-20'
+                                        : materiaActiva
+                                        ? 'opacity-35 bg-white/70 dark:bg-slate-900/60 border-slate-200/60 dark:border-slate-800'
+                                        : 'bg-white dark:bg-slate-900/90 hover:shadow-xl hover:-translate-y-1 border-slate-200/80 dark:border-slate-800'
                                 ]"
                             >
-                                <!-- Cabecera de la Tarjeta: Sigla y Badges -->
-                                <div class="flex items-center justify-between mb-1.5">
-                                    <span class="font-extrabold text-xs tracking-wider text-indigo-700 dark:text-indigo-300">
+                                <!-- Conector Puerto Izquierdo (Requisitos Entrantes) -->
+                                <div
+                                    :class="[
+                                        'absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center transition-colors',
+                                        idsRequisitosActiva.has(materia.id)
+                                            ? 'bg-blue-500 shadow-md shadow-blue-500/50'
+                                            : 'bg-slate-300 dark:bg-slate-700'
+                                    ]"
+                                    title="Punto de conexión de requisitos"
+                                >
+                                    <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                </div>
+
+                                <!-- Conector Puerto Derecho (Desbloqueos Salientes) -->
+                                <div
+                                    :class="[
+                                        'absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-2 border-white dark:border-slate-900 flex items-center justify-center transition-colors',
+                                        idsDesbloqueadasActiva.has(materia.id)
+                                            ? 'bg-emerald-500 shadow-md shadow-emerald-500/50'
+                                            : 'bg-slate-300 dark:bg-slate-700'
+                                    ]"
+                                    title="Punto de conexión de desbloqueo"
+                                >
+                                    <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                                </div>
+
+                                <!-- Header de Tarjeta: Sigla, Área y Nota Mínima -->
+                                <div class="flex items-center justify-between gap-1 mb-2">
+                                    <span class="font-mono font-black text-xs px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white border border-slate-200 dark:border-slate-700">
                                         {{ materia.sigla }}
                                     </span>
-                                    <div class="flex items-center gap-1">
-                                        <Tag
-                                            :value="`Mín ${materia.nota_minima_aprobacion}`"
-                                            :severity="materia.nota_minima_aprobacion > 51 ? 'warning' : 'info'"
-                                            class="!text-[10px] !px-1.5 !py-0.5"
-                                        />
-                                    </div>
+                                    <span :class="['text-[10px] font-bold px-2 py-0.5 rounded-full border', getAreaInfo(materia).badgeBg]">
+                                        <i :class="[getAreaInfo(materia).icon, 'text-[9px] mr-1']"></i>
+                                        {{ getAreaInfo(materia).nombre.split(' ')[0] }}
+                                    </span>
                                 </div>
 
                                 <!-- Nombre de la Materia -->
-                                <h4 class="font-semibold text-xs text-gray-900 dark:text-gray-100 line-clamp-2 mb-2 leading-snug">
+                                <h4 class="font-bold text-xs text-slate-900 dark:text-white leading-tight line-clamp-2">
                                     {{ materia.nombre }}
                                 </h4>
 
-                                <!-- Resumen de Requisitos y Acciones -->
-                                <div class="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-700/60 text-[11px]">
-                                    <span
-                                        :class="[
-                                            'flex items-center gap-1 font-medium',
-                                            materia.requisitos?.length ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'
-                                        ]"
-                                        :title="materia.requisitos?.map(r => r.sigla).join(', ') || 'Sin pre-requisitos'"
-                                    >
-                                        <i class="pi pi-link text-[10px]"></i>
-                                        <span>{{ materia.requisitos?.length || 0 }} req</span>
-                                    </span>
+                                <!-- Footer de Tarjeta: Badges y Acciones Rápidas -->
+                                <div class="mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                                    <div class="flex items-center gap-1.5 font-mono">
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                            {{ materia.requisitos?.length || 0 }} req
+                                        </span>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                            Min {{ materia.nota_minima_aprobacion }}
+                                        </span>
+                                    </div>
 
-                                    <!-- Botones de Acción -->
-                                    <div class="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+                                    <!-- Botones de Acción (Vincular Requisito, Editar, Eliminar) -->
+                                    <div class="flex items-center gap-1 opacity-90 group-hover:opacity-100">
                                         <button
                                             @click="iniciarModoEnlace(materia, $event)"
-                                            class="p-1 rounded text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                            title="Enlazar o desenlazar pre-requisitos"
+                                            class="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors"
+                                            title="Vincular pre-requisito a esta materia"
                                         >
-                                            <i class="pi pi-sitemap text-[11px]"></i>
+                                            <i class="pi pi-link text-[10px]"></i>
                                         </button>
                                         <button
                                             @click="abrirModalEditar(materia, $event)"
-                                            class="p-1 rounded text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-                                            title="Editar datos de materia"
+                                            class="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors"
+                                            title="Editar materia"
                                         >
-                                            <i class="pi pi-pencil text-[11px]"></i>
+                                            <i class="pi pi-pencil text-[10px]"></i>
                                         </button>
                                         <button
                                             @click="eliminarMateria(materia, $event)"
-                                            class="p-1 rounded text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                            class="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-rose-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors"
                                             title="Eliminar materia"
                                         >
-                                            <i class="pi pi-trash text-[11px]"></i>
+                                            <i class="pi pi-trash text-[10px]"></i>
                                         </button>
                                     </div>
                                 </div>
-
-                                <!-- Etiqueta Flotante de Relación (cuando está seleccionada) -->
-                                <div
-                                    v-if="idsRequisitosSeleccionada.has(materia.id)"
-                                    class="absolute -top-2.5 right-2 bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs"
-                                >
-                                    Pre-requisito
-                                </div>
-                                <div
-                                    v-else-if="idsDesbloqueadasSeleccionada.has(materia.id)"
-                                    class="absolute -top-2.5 right-2 bg-amber-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-xs"
-                                >
-                                    Desbloqueada
-                                </div>
                             </div>
 
-                            <!-- Estado vacío en la columna -->
-                            <div
-                                v-if="!materiasPorNivel[nivel]?.length"
-                                class="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 dark:border-gray-700/60 rounded-xl p-4 text-center text-gray-400 dark:text-gray-500 text-xs"
+                            <!-- Botón agregar al pie de columna -->
+                            <button
+                                @click="abrirModalNueva(nivel)"
+                                class="w-full py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-pink-500 dark:hover:border-pink-500 hover:bg-pink-50/30 text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                             >
-                                <i class="pi pi-plus-circle text-lg mb-1 opacity-50"></i>
-                                <span>Sin materias</span>
-                                <button
-                                    @click="abrirModalNueva(nivel)"
-                                    class="mt-2 text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-                                >
-                                    + Agregar
-                                </button>
-                            </div>
+                                <i class="pi pi-plus text-[10px]"></i>
+                                <span>Agregar Materia</span>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- DIALOG / MODAL PARA CREAR O EDITAR MATERIA -->
+        <!-- MODAL DE CREACIÓN / EDICIÓN DE MATERIA -->
         <Dialog
             v-model:visible="dialogVisible"
             modal
-            :header="esEdicion ? 'Editar Materia' : 'Nueva Materia en Malla Curricular'"
-            :style="{ width: '450px' }"
-            class="p-fluid"
+            :header="esEdicion ? 'Editar Materia Curricular' : 'Registrar Nueva Materia'"
+            :style="{ width: '90vw', maxWidth: '480px' }"
         >
-            <form @submit.prevent="guardarMateria" class="space-y-4 pt-2">
+            <div class="space-y-4 pt-2">
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        Nombre de la Materia *
-                    </label>
-                    <InputText
-                        v-model="materiaForm.nombre"
-                        placeholder="ej: Algoritmos Avanzados"
-                        class="w-full"
-                        required
-                    />
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Nombre de la Materia *</label>
+                    <InputText v-model="materiaForm.nombre" placeholder="Ej: Inteligencia Artificial" class="w-full text-xs" />
                 </div>
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                            Sigla / Código *
-                        </label>
-                        <InputText
-                            v-model="materiaForm.sigla"
-                            placeholder="ej: SIS-302"
-                            class="w-full uppercase"
-                            required
-                        />
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Sigla / Código *</label>
+                        <InputText v-model="materiaForm.sigla" placeholder="Ej: SIS-501" class="w-full text-xs font-mono uppercase" />
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                            Nivel / Semestre *
-                        </label>
-                        <InputNumber
-                            v-model="materiaForm.nivel"
-                            :min="1"
-                            :max="totalNiveles"
-                            showButtons
-                            class="w-full"
-                        />
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Semestre / Nivel *</label>
+                        <InputNumber v-model="materiaForm.nivel" :min="1" :max="totalNiveles" class="w-full text-xs" />
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                        Nota Mínima de Aprobación *
-                    </label>
-                    <InputNumber
-                        v-model="materiaForm.nota_minima_aprobacion"
-                        :min="1"
-                        :max="100"
-                        showButtons
-                        class="w-full"
-                    />
-                    <small class="text-[11px] text-gray-500 dark:text-gray-400">
-                        Por defecto 51 puntos (o 61 para materias especiales).
-                    </small>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Nota Mínima de Aprobación *</label>
+                    <InputNumber v-model="materiaForm.nota_minima_aprobacion" :min="1" :max="100" class="w-full text-xs" />
+                    <p class="text-[11px] text-slate-400 mt-1">Generalmente 51 puntos para materias regulares o 61 puntos para talleres de grado / admisión.</p>
                 </div>
+            </div>
 
-                <div class="flex justify-end gap-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+            <template #footer>
+                <div class="flex justify-end gap-2 pt-2">
+                    <Button label="Cancelar" severity="secondary" text @click="dialogVisible = false" />
                     <Button
-                        label="Cancelar"
-                        severity="secondary"
-                        text
-                        @click="dialogVisible = false"
-                    />
-                    <Button
-                        :label="esEdicion ? 'Guardar Cambios' : 'Crear Materia'"
-                        type="submit"
-                        severity="primary"
+                        :label="esEdicion ? 'Actualizar Materia' : 'Crear Materia'"
+                        icon="pi pi-check"
+                        @click="guardarMateria"
+                        class="!bg-gradient-to-r !from-pink-500 !to-rose-600 !border-0 font-bold"
                     />
                 </div>
-            </form>
+            </template>
         </Dialog>
     </AuthenticatedLayout>
 </template>

@@ -16,7 +16,24 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    $totalPostulantes = \App\Models\User::whereNotNull('estado_admision')->count();
+    $admitidos = \App\Models\User::where('estado_admision', 'Admitido')->count();
+    $cursosActivos = \App\Models\Curso::where('gestion', '2026-I')->count();
+    $materiasTotal = \App\Models\Materia::count();
+    $docentesTotal = \App\Models\User::role('Docente')->count();
+    $inscripcionesActivas = \App\Models\Inscripcion::whereHas('curso', fn ($q) => $q->where('gestion', '2026-I'))->count();
+
+    return Inertia::render('Dashboard', [
+        'stats' => [
+            'totalPostulantes' => $totalPostulantes,
+            'admitidos' => $admitidos,
+            'tasaAprobacion' => $totalPostulantes > 0 ? round(($admitidos / $totalPostulantes) * 100, 1) : 0,
+            'cursosActivos' => $cursosActivos,
+            'materiasTotal' => $materiasTotal,
+            'docentesTotal' => $docentesTotal,
+            'inscripcionesActivas' => $inscripcionesActivas,
+        ],
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {

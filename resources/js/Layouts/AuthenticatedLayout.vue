@@ -1,17 +1,28 @@
 <script setup>
-import { ref, onMounted } from 'vue';
-import ApplicationLogo from '@/Components/ApplicationLogo.vue';
-import Dropdown from '@/Components/Dropdown.vue';
-import DropdownLink from '@/Components/DropdownLink.vue';
-import NavLink from '@/Components/NavLink.vue';
-import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link } from '@inertiajs/vue3';
+import { ref, computed, onMounted } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
-import Avatar from 'primevue/avatar';
+import InputText from 'primevue/inputtext';
 
-const showingNavigationDropdown = ref(false);
+const page = usePage();
+const user = computed(() => page.props.auth?.user || {});
+const userRole = computed(() => {
+    if (user.value.roles && user.value.roles.length > 0) {
+        return typeof user.value.roles[0] === 'string'
+            ? user.value.roles[0]
+            : user.value.roles[0].name;
+    }
+    return 'Administrador';
+});
+
+// Sidebar Mobile Toggle
+const sidebarAbierta = ref(false);
+const toggleSidebar = () => {
+    sidebarAbierta.value = !sidebarAbierta.value;
+};
+
+// Dark Mode Toggle
 const isDark = ref(false);
-
 const applyTheme = (dark) => {
     isDark.value = dark;
     if (dark) {
@@ -39,253 +50,252 @@ onMounted(() => {
         applyTheme(false);
     }
 });
+
+const menuItems = [
+    {
+        name: 'Dashboard',
+        route: 'dashboard',
+        icon: 'pi pi-th-large',
+    },
+    {
+        name: 'Malla Curricular',
+        route: 'malla-curricular.index',
+        icon: 'pi pi-sitemap',
+    },
+    {
+        name: 'Cursos y Paralelos',
+        route: 'cursos.index',
+        icon: 'pi pi-calendar',
+    },
+    {
+        name: 'Admisiones y Kardex',
+        route: 'admisiones.index',
+        icon: 'pi pi-user-plus',
+    },
+];
+
+// Profile dropdown state
+const dropdownPerfilAbierto = ref(false);
 </script>
 
 <template>
-    <div>
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-200">
-            <nav
-                class="border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800 transition-colors duration-200"
-            >
-                <!-- Primary Navigation Menu -->
-                <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                    <div class="flex h-16 justify-between">
-                        <div class="flex">
-                            <!-- Logo -->
-                            <div class="flex shrink-0 items-center">
-                                <Link :href="route('dashboard')">
-                                    <ApplicationLogo
-                                        class="block h-9 w-auto fill-current text-gray-800 dark:text-gray-200"
-                                    />
-                                </Link>
-                            </div>
+    <div class="min-h-screen bg-slate-100 dark:bg-[#0b0f19] text-slate-800 dark:text-slate-100 flex transition-colors duration-200">
+        <!-- BACKDROP PARA MÓVILES -->
+        <div
+            v-if="sidebarAbierta"
+            @click="sidebarAbierta = false"
+            class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 lg:hidden"
+        ></div>
 
-                            <!-- Navigation Links -->
-                            <div
-                                class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex"
-                            >
-                                <NavLink
-                                    :href="route('dashboard')"
-                                    :active="route().current('dashboard')"
-                                >
-                                    Dashboard
-                                </NavLink>
-                                <NavLink
-                                    :href="route('malla-curricular.index')"
-                                    :active="route().current('malla-curricular.index')"
-                                >
-                                    Malla Curricular
-                                </NavLink>
-                                <NavLink
-                                    :href="route('cursos.index')"
-                                    :active="route().current('cursos.index')"
-                                >
-                                    Cursos y Paralelos
-                                </NavLink>
-                                <NavLink
-                                    :href="route('admisiones.index')"
-                                    :active="route().current('admisiones.index')"
-                                >
-                                    Admisiones y Kardex
-                                </NavLink>
+        <!-- SIDEBAR ESTILO CREATIVE TIM (MATERIAL DASHBOARD PRO) -->
+        <aside
+            :class="[
+                'fixed lg:sticky top-0 h-screen z-50 w-64 bg-[#111827] dark:bg-[#0d121f] text-white flex flex-col justify-between border-r border-slate-800/80 shadow-2xl transition-transform duration-300 ease-in-out',
+                sidebarAbierta ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+            ]"
+        >
+            <div class="flex-1 overflow-y-auto px-4 py-5 space-y-6">
+                <!-- BRAND / LOGO HEADER -->
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-500 via-rose-500 to-amber-400 flex items-center justify-center shadow-lg shadow-pink-500/30">
+                        <i class="pi pi-graduation-cap text-xl text-white font-bold"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-sm font-black tracking-wider uppercase bg-gradient-to-r from-white via-slate-200 to-pink-200 bg-clip-text text-transparent">
+                            Creative Academic
+                        </h1>
+                        <p class="text-[10px] text-slate-400 font-semibold tracking-widest uppercase">
+                            Sistema de Gestión
+                        </p>
+                    </div>
+                </div>
+
+                <div class="h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent"></div>
+
+                <!-- USER PROFILE WIDGET (Estilo Tania Andrew en Material Dashboard) -->
+                <div class="px-2 py-3 rounded-2xl bg-white/5 border border-white/5 flex items-center gap-3">
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-pink-500 to-rose-600 flex items-center justify-center font-bold text-sm text-white shadow-md">
+                            {{ user.name ? user.name.charAt(0) : 'U' }}
+                        </div>
+                        <span class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#111827]"></span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-bold text-white truncate">
+                            {{ user.name }}
+                        </p>
+                        <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold bg-pink-500/20 text-pink-300 border border-pink-500/30 uppercase tracking-wider">
+                            {{ userRole }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- NAVIGATION MENU -->
+                <nav class="space-y-1.5">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-2">
+                        Módulos Académicos
+                    </p>
+
+                    <Link
+                        v-for="item in menuItems"
+                        :key="item.name"
+                        :href="route(item.route)"
+                        :class="[
+                            'flex items-center gap-3 px-3.5 py-3 rounded-xl text-xs font-semibold transition-all duration-200 group',
+                            route().current(item.route)
+                                ? 'bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 text-white shadow-lg shadow-pink-500/35 font-bold'
+                                : 'text-slate-300 hover:text-white hover:bg-white/10'
+                        ]"
+                    >
+                        <div
+                            :class="[
+                                'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+                                route().current(item.route)
+                                    ? 'bg-white/20 text-white'
+                                    : 'bg-white/5 text-slate-400 group-hover:text-white group-hover:bg-white/15'
+                            ]"
+                        >
+                            <i :class="[item.icon, 'text-sm']"></i>
+                        </div>
+                        <span>{{ item.name }}</span>
+                    </Link>
+                </nav>
+            </div>
+
+            <!-- FOOTER SIDEBAR -->
+            <div class="p-4 border-t border-slate-800/80 bg-black/20">
+                <div class="flex items-center justify-between">
+                    <button
+                        @click="toggleDarkMode"
+                        type="button"
+                        class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors text-xs flex items-center gap-2"
+                        :title="isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
+                    >
+                        <i :class="isDark ? 'pi pi-sun text-amber-400' : 'pi pi-moon text-indigo-300'"></i>
+                        <span class="text-[11px]">{{ isDark ? 'Claro' : 'Oscuro' }}</span>
+                    </button>
+
+                    <Link
+                        :href="route('logout')"
+                        method="post"
+                        as="button"
+                        class="p-2 rounded-lg bg-rose-500/20 hover:bg-rose-500 text-rose-300 hover:text-white transition-all text-xs flex items-center gap-1.5 font-semibold"
+                        title="Cerrar Sesión"
+                    >
+                        <i class="pi pi-power-off text-xs"></i>
+                        <span class="text-[11px]">Salir</span>
+                    </Link>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN WRAPPER -->
+        <div class="flex-1 flex flex-col min-w-0">
+            <!-- TOP NAVBAR (Material Dashboard Floating Glassmorphism Style) -->
+            <header class="sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
+                <div class="flex items-center justify-between gap-4">
+                    <!-- Left: Hamburger (mobile) + Breadcrumbs -->
+                    <div class="flex items-center gap-3">
+                        <button
+                            @click="toggleSidebar"
+                            type="button"
+                            class="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                        >
+                            <i class="pi pi-bars text-lg"></i>
+                        </button>
+
+                        <div>
+                            <div class="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+                                <span>Páginas</span>
+                                <span>/</span>
+                                <span class="text-slate-700 dark:text-slate-300 font-semibold capitalize">
+                                    {{ route().current()?.split('.')[0] || 'Dashboard' }}
+                                </span>
                             </div>
+                            <h2 class="text-base font-black text-slate-900 dark:text-white tracking-tight">
+                                <slot name="header">
+                                    {{ route().current()?.split('.')[0]?.toUpperCase() || 'DASHBOARD' }}
+                                </slot>
+                            </h2>
+                        </div>
+                    </div>
+
+                    <!-- Right: Search Bar + Action Icons -->
+                    <div class="flex items-center gap-3">
+                        <div class="hidden sm:block relative w-56">
+                            <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                            <input
+                                type="text"
+                                placeholder="Buscar en el sistema..."
+                                class="w-full pl-8 pr-3 py-1.5 text-xs rounded-full border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/90 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all shadow-xs"
+                            />
                         </div>
 
-                        <div class="hidden sm:ms-6 sm:flex sm:items-center sm:gap-2">
-                            <!-- PrimeVue Theme Toggle Button -->
-                            <Button
-                                :icon="isDark ? 'pi pi-moon' : 'pi pi-sun'"
-                                severity="secondary"
-                                text
-                                rounded
-                                @click="toggleDarkMode"
-                                :title="isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
-                                :aria-label="isDark ? 'Cambiar a Modo Claro' : 'Cambiar a Modo Oscuro'"
-                                class="!p-2 text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                            />
-
-                            <!-- Settings Dropdown -->
-                            <div class="relative ms-2">
-                                <Dropdown align="right" width="48">
-                                    <template #trigger>
-                                        <span class="inline-flex rounded-md">
-                                            <button
-                                                type="button"
-                                                class="inline-flex items-center gap-2 rounded-md border border-transparent bg-white dark:bg-gray-800 px-3 py-2 text-sm font-medium leading-4 text-gray-500 dark:text-gray-300 transition duration-150 ease-in-out hover:text-gray-700 dark:hover:text-white focus:outline-none"
-                                            >
-                                                <Avatar
-                                                    :label="$page.props.auth.user.name.charAt(0).toUpperCase()"
-                                                    shape="circle"
-                                                    class="bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-xs font-bold"
-                                                    style="width: 28px; height: 28px;"
-                                                />
-                                                <span>{{ $page.props.auth.user.name }}</span>
-
-                                                <svg
-                                                    class="-me-0.5 ms-1 h-4 w-4"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 20 20"
-                                                    fill="currentColor"
-                                                >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                        clip-rule="evenodd"
-                                                    />
-                                                </svg>
-                                            </button>
-                                        </span>
-                                    </template>
-
-                                    <template #content>
-                                        <DropdownLink
-                                            :href="route('profile.edit')"
-                                        >
-                                            Perfil
-                                        </DropdownLink>
-                                        <DropdownLink
-                                            :href="route('logout')"
-                                            method="post"
-                                            as="button"
-                                        >
-                                            Cerrar Sesión
-                                        </DropdownLink>
-                                    </template>
-                                </Dropdown>
-                            </div>
-                        </div>
-
-                        <!-- Hamburger -->
-                        <div class="-me-2 flex items-center sm:hidden gap-1">
-                            <!-- PrimeVue Mobile Theme Toggle -->
-                            <Button
-                                :icon="isDark ? 'pi pi-moon' : 'pi pi-sun'"
-                                severity="secondary"
-                                text
-                                rounded
-                                @click="toggleDarkMode"
-                                class="!p-2 text-gray-500 dark:text-gray-300"
-                            />
-
+                        <!-- Notification Bell con Badge Rojo (Como en Creative Tim) -->
+                        <div class="relative">
                             <button
-                                @click="
-                                    showingNavigationDropdown =
-                                        !showingNavigationDropdown
-                                "
-                                class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 dark:text-gray-300 transition duration-150 ease-in-out hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-500 focus:bg-gray-100 dark:focus:bg-gray-700 focus:text-gray-500 focus:outline-none"
+                                type="button"
+                                class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors relative"
+                                title="Notificaciones del Sistema"
                             >
-                                <svg
-                                    class="h-6 w-6"
-                                    stroke="currentColor"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        :class="{
-                                            hidden: showingNavigationDropdown,
-                                            'inline-flex':
-                                                !showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M4 6h16M4 12h16M4 18h16"
-                                    />
-                                    <path
-                                        :class="{
-                                            hidden: !showingNavigationDropdown,
-                                            'inline-flex':
-                                                showingNavigationDropdown,
-                                        }"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
+                                <i class="pi pi-bell text-sm"></i>
+                                <span class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900 animate-pulse"></span>
                             </button>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Responsive Navigation Menu -->
-                <div
-                    :class="{
-                        block: showingNavigationDropdown,
-                        hidden: !showingNavigationDropdown,
-                    }"
-                    class="sm:hidden"
-                >
-                    <div class="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            :href="route('dashboard')"
-                            :active="route().current('dashboard')"
+                        <!-- Theme Toggle Quick Button -->
+                        <button
+                            @click="toggleDarkMode"
+                            type="button"
+                            class="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
                         >
-                            Dashboard
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            :href="route('malla-curricular.index')"
-                            :active="route().current('malla-curricular.index')"
-                        >
-                            Malla Curricular
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            :href="route('cursos.index')"
-                            :active="route().current('cursos.index')"
-                        >
-                            Cursos y Paralelos
-                        </ResponsiveNavLink>
-                        <ResponsiveNavLink
-                            :href="route('admisiones.index')"
-                            :active="route().current('admisiones.index')"
-                        >
-                            Admisiones y Kardex
-                        </ResponsiveNavLink>
-                    </div>
+                            <i :class="isDark ? 'pi pi-sun text-amber-400 text-sm' : 'pi pi-moon text-indigo-400 text-sm'"></i>
+                        </button>
 
-                    <!-- Responsive Settings Options -->
-                    <div
-                        class="border-t border-gray-200 dark:border-gray-700 pb-1 pt-4"
-                    >
-                        <div class="px-4">
+                        <!-- User Avatar Quick Dropdown -->
+                        <div class="relative">
+                            <button
+                                @click="dropdownPerfilAbierto = !dropdownPerfilAbierto"
+                                type="button"
+                                class="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-rose-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
+                                    {{ user.name ? user.name.charAt(0) : 'U' }}
+                                </div>
+                            </button>
+
+                            <!-- Dropdown Menu -->
                             <div
-                                class="text-base font-medium text-gray-800 dark:text-gray-200"
+                                v-if="dropdownPerfilAbierto"
+                                @click="dropdownPerfilAbierto = false"
+                                class="absolute right-0 mt-2 w-48 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl py-1 z-50 text-xs"
                             >
-                                {{ $page.props.auth.user.name }}
+                                <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                                    <p class="font-bold text-slate-900 dark:text-white truncate">{{ user.name }}</p>
+                                    <p class="text-[11px] text-slate-500 truncate">{{ user.email }}</p>
+                                </div>
+                                <Link
+                                    :href="route('profile.edit')"
+                                    class="block px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-pink-50 dark:hover:bg-pink-950/40 hover:text-pink-600"
+                                >
+                                    <i class="pi pi-user mr-2 text-xs"></i> Mi Perfil
+                                </Link>
+                                <Link
+                                    :href="route('logout')"
+                                    method="post"
+                                    as="button"
+                                    class="w-full text-left block px-4 py-2 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                                >
+                                    <i class="pi pi-power-off mr-2 text-xs"></i> Cerrar Sesión
+                                </Link>
                             </div>
-                            <div class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                                {{ $page.props.auth.user.email }}
-                            </div>
-                        </div>
-
-                        <div class="mt-3 space-y-1">
-                            <ResponsiveNavLink :href="route('profile.edit')">
-                                Perfil
-                            </ResponsiveNavLink>
-                            <ResponsiveNavLink
-                                :href="route('logout')"
-                                method="post"
-                                as="button"
-                            >
-                                Cerrar Sesión
-                            </ResponsiveNavLink>
                         </div>
                     </div>
-                </div>
-            </nav>
-
-            <!-- Page Heading -->
-            <header
-                class="bg-white dark:bg-gray-800 shadow transition-colors duration-200"
-                v-if="$slots.header"
-            >
-                <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-                    <slot name="header" />
                 </div>
             </header>
 
-            <!-- Page Content -->
-            <main>
+            <!-- MAIN CONTENT -->
+            <main class="flex-1">
                 <slot />
             </main>
         </div>
