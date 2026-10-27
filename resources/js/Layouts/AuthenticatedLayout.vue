@@ -82,6 +82,12 @@ onMounted(() => {
                                 >
                                     Cursos y Paralelos
                                 </NavLink>
+                                <NavLink
+                                    :href="route('admisiones.index')"
+                                    :active="route().current('admisiones.index')"
+                                >
+                                    Admisiones y Kardex
+                                </NavLink>
                             </div>
                         </div>
 
@@ -228,6 +234,12 @@ onMounted(() => {
                             :active="route().current('cursos.index')"
                         >
                             Cursos y Paralelos
+                        </ResponsiveNavLink>
+                        <ResponsiveNavLink
+                            :href="route('admisiones.index')"
+                            :active="route().current('admisiones.index')"
+                        >
+                            Admisiones y Kardex
                         </ResponsiveNavLink>
                     </div>
 

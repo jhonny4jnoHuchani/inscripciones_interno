@@ -34,8 +34,20 @@ Route::middleware('auth')->group(function () {
     Route::delete('/cursos/{curso}', [App\Http\Controllers\CursoController::class, 'destroy'])->name('cursos.destroy');
     Route::post('/cursos/{curso}/asignar-docente', [App\Http\Controllers\CursoController::class, 'asignarDocente'])->name('cursos.asignar-docente');
 
+    // Admisión de Estudiantes y Kardex Manual
+    Route::get('/admisiones', [App\Http\Controllers\AdmisionController::class, 'index'])->name('admisiones.index');
+    Route::post('/admisiones/postulantes', [App\Http\Controllers\AdmisionController::class, 'storePostulante'])->name('admisiones.postulantes.store');
+    Route::post('/admisiones/{user}/nota', [App\Http\Controllers\AdmisionController::class, 'registrarNota'])->name('admisiones.nota.store');
+    Route::post('/admisiones/{user}/inscribir-manual', [App\Http\Controllers\AdmisionController::class, 'inscribirManual'])->name('admisiones.inscribir-manual');
+    Route::delete('/admisiones/{user}/inscripciones/{inscripcion}', [App\Http\Controllers\AdmisionController::class, 'desinscribirMateria'])->name('admisiones.desinscribir');
+
+    // Gestión de Roles y Permisos con Descripción
+    Route::post('/roles', [App\Http\Controllers\RolePermissionController::class, 'storeRole'])->name('roles.store');
+    Route::post('/permisos', [App\Http\Controllers\RolePermissionController::class, 'storePermission'])->name('permisos.store');
+    Route::put('/roles/{role}/permisos', [App\Http\Controllers\RolePermissionController::class, 'syncPermissions'])->name('roles.sync-permissions');
+
     Route::get('/kardex', function () {
-        return Inertia::render('Kardex');
+        return redirect()->route('admisiones.index');
     })->name('kardex');
 
     Route::get('/mis-cursos', function () {

@@ -15,7 +15,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'carrera_id'])]
+#[Fillable([
+    'name',
+    'email',
+    'password',
+    'carrera_id',
+    'ci',
+    'nota_admision',
+    'modalidad_admision',
+    'estado_admision',
+    'fecha_admision',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,11 +42,13 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'nota_admision' => 'decimal:2',
+            'fecha_admision' => 'date',
         ];
     }
 
     /**
-     * Carrera a la que pertenece el usuario (ej: Estudiante).
+     * Carrera a la que pertenece el usuario (ej: Estudiante o Postulante).
      */
     public function carrera(): BelongsTo
     {
@@ -80,6 +92,40 @@ class User extends Authenticatable
         )
             ->withPivot(['nota_final', 'estado', 'tipo_registro'])
             ->withTimestamps();
+    }
+
+    /**
+     * Evalúa y procesa la admisión del estudiante según la nota (>= 61) o modalidad.
+     */
+    public function evaluarAdmision(?float $nota, string $modalidad = 'Examen de Admisión'): bool
+    {
+        $this->nota_admision = $nota;
+        $this->modalidad_admision = $modalidad;
+
+        // Regla: Aceptado con nota >= 61 o por modalidad especial (Excelencia Académica)
+        if ($modalidad === 'Excelencia Académica' || ($nota !== null && $nota >= 61)) {
+            $this->estado_admision = 'Admitido';
+            $this->fecha_admision = now();
+            if (! $this->hasRole('Estudiante')) {
+                $this->assignRole('Estudiante');
+            }
+            $admitido = true;
+        } else {
+            $this->estado_admision = 'No Admitido';
+            $this->fecha_admision = now();
+            $admitido = false;
+        }
+
+        $this->save();
+        return $admitido;
+    }
+
+    /**
+     * Comprueba si el estudiante está formalmente admitido para poder inscribirse a 1er semestre.
+     */
+    public function estaAdmitido(): bool
+    {
+        return $this->estado_admision === 'Admitido';
     }
 
     /**

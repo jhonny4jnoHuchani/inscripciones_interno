@@ -19,10 +19,61 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Roles
         $roles = ['Administrador', 'Director', 'Docente', 'Estudiante'];
+        $roleModels = [];
         foreach ($roles as $role) {
-            Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
+            $roleModels[$role] = Role::firstOrCreate(['name' => $role, 'guard_name' => 'web']);
         }
+
+        // Permisos con descripción explicativa
+        $permisosData = [
+            [
+                'name' => 'gestionar_admisiones',
+                'descripcion' => 'Registrar postulantes y asentar notas del examen de admisión (mínimo 61 para aprobar).',
+            ],
+            [
+                'name' => 'inscribir_estudiante_manual',
+                'descripcion' => 'Inscribir manualmente estudiantes por Kardex seleccionando materias y paralelos.',
+            ],
+            [
+                'name' => 'configurar_fechas_inscripcion',
+                'descripcion' => 'Habilitar y cerrar periodos de inscripción semestral.',
+            ],
+            [
+                'name' => 'administrar_roles_permisos',
+                'descripcion' => 'Crear y gestionar roles dinámicos y asignar permisos del sistema.',
+            ],
+            [
+                'name' => 'gestionar_malla',
+                'descripcion' => 'Diseñar y actualizar la malla curricular y pre-requisitos de materias.',
+            ],
+            [
+                'name' => 'gestionar_cursos',
+                'descripcion' => 'Aperturar paralelos, definir cupos máximos y asignar docentes.',
+            ],
+        ];
+
+        foreach ($permisosData as $p) {
+            $perm = \App\Models\Permission::firstOrCreate(
+                ['name' => $p['name'], 'guard_name' => 'web'],
+                ['descripcion' => $p['descripcion']]
+            );
+            // Actualizar descripción si ya existía sin ella
+            if ($perm->descripcion !== $p['descripcion']) {
+                $perm->update(['descripcion' => $p['descripcion']]);
+            }
+        }
+
+        // Asignar permisos a Administrador y Director
+        $roleModels['Administrador']->givePermissionTo(\App\Models\Permission::all());
+        $roleModels['Director']->givePermissionTo([
+            'gestionar_admisiones',
+            'inscribir_estudiante_manual',
+            'configurar_fechas_inscripcion',
+            'gestionar_malla',
+            'gestionar_cursos',
+        ]);
 
         // Crear o actualizar Carrera principal
         $carrera = Carrera::firstOrCreate(
@@ -172,6 +223,65 @@ class DatabaseSeeder extends Seeder
                 'cupo_maximo' => 35,
                 'fecha_inicio_calificacion' => now(),
                 'fecha_fin_calificacion' => now()->addDays(30),
+            ]
+        );
+
+        // Postulantes / Estudiantes de muestra para Admisiones y Kardex
+        $estudianteAdmitido = User::firstOrCreate(
+            ['email' => 'juan.perez@estudiante.test'],
+            [
+                'name' => 'Juan Pérez Gómez',
+                'ci' => '10293847',
+                'password' => bcrypt('password'),
+                'carrera_id' => $carrera->id,
+                'modalidad_admision' => 'Examen de Admisión',
+                'nota_admision' => 74.00,
+                'estado_admision' => 'Admitido',
+                'fecha_admision' => now()->subDays(5),
+            ]
+        );
+        $estudianteAdmitido->assignRole('Estudiante');
+
+        $estudianteExcelencia = User::firstOrCreate(
+            ['email' => 'ana.condori@estudiante.test'],
+            [
+                'name' => 'Ana Condori Quispe',
+                'ci' => '56473829',
+                'password' => bcrypt('password'),
+                'carrera_id' => $carrera->id,
+                'modalidad_admision' => 'Excelencia Académica',
+                'nota_admision' => 95.00,
+                'estado_admision' => 'Admitido',
+                'fecha_admision' => now()->subDays(7),
+            ]
+        );
+        $estudianteExcelencia->assignRole('Estudiante');
+
+        User::firstOrCreate(
+            ['email' => 'maria.lopez@postulante.test'],
+            [
+                'name' => 'María López Cruz',
+                'ci' => '84736251',
+                'password' => bcrypt('password'),
+                'carrera_id' => $carrera->id,
+                'modalidad_admision' => 'Examen de Admisión',
+                'nota_admision' => 48.00,
+                'estado_admision' => 'No Admitido',
+                'fecha_admision' => now()->subDays(2),
+            ]
+        );
+
+        User::firstOrCreate(
+            ['email' => 'rodrigo.morales@postulante.test'],
+            [
+                'name' => 'Rodrigo Morales Vega',
+                'ci' => '92837465',
+                'password' => bcrypt('password'),
+                'carrera_id' => $carrera->id,
+                'modalidad_admision' => 'Examen de Admisión',
+                'nota_admision' => null,
+                'estado_admision' => 'Pendiente',
+                'fecha_admision' => null,
             ]
         );
     }
