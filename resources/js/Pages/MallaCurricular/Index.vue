@@ -35,23 +35,19 @@ watch(() => props.carreraActiva, (newVal) => {
     nextTick(() => recalcularFlechas());
 }, { deep: true });
 
-// Materia actualmente inspeccionada (click) o previsualizada (hover)
+// Materia seleccionada (CLICK) y materia en hover (solo para iluminar flechas sin mover el layout)
 const materiaSeleccionada = ref(null);
-const materiaHover = ref(null);
+const materiaHoverId = ref(null);
 const modoArbolCompleto = ref(false);
 
 // Filtro de búsqueda y área
 const busqueda = ref('');
 const filtroArea = ref('todas');
 
-// Materia activa para el trazado de relaciones (hover prioritario sobre click)
-const materiaActiva = computed(() => materiaHover.value || materiaSeleccionada.value);
+// Materia activa para iluminación de flechas (hover prioritario sobre click para las líneas)
+const idMateriaActiva = computed(() => materiaHoverId.value || materiaSeleccionada.value?.id || null);
 
-// Modo Enlace de Requisitos
-const modoEnlace = ref(false);
-const materiaOrigenEnlace = ref(null);
-
-// Modal de Creación / Edición
+// Modal de Creación / Edición de Materia
 const dialogVisible = ref(false);
 const esEdicion = ref(false);
 const materiaForm = ref({
@@ -63,11 +59,16 @@ const materiaForm = ref({
     nota_minima_aprobacion: 51,
 });
 
-// Niveles organizados en columnas
-const totalNiveles = computed(() => props.carreraActiva?.total_niveles || 9);
+// Modal dedicado para Gestionar Pre-requisitos (Estricto nivel inferior)
+const modalRequisitosVisible = ref(false);
+const materiaParaRequisitos = ref(null);
+
+// Niveles organizados en columnas (dinámico por carrera)
+const totalNiveles = computed(() => props.carreraActiva?.total_niveles || 10);
 
 // Mapeo inteligente de área académica según la sigla y nombre de la materia
 const getAreaInfo = (materia) => {
+    if (!materia) return { nombre: 'General', headerGradient: 'from-slate-600 to-gray-700', badgeBg: 'bg-slate-500/10 text-slate-500 border-slate-500/30', borderAccent: 'border-l-4 border-l-slate-400', icon: 'pi pi-book', glowColor: '#64748b' };
     const s = materia.sigla?.toUpperCase() || '';
     const n = materia.nombre?.toLowerCase() || '';
 
@@ -190,14 +191,14 @@ const getDescendientesRecursivos = (materiaId, visitados = new Set()) => {
 
 // IDs de requisitos de la materia activa (hacia atrás)
 const idsRequisitosActiva = computed(() => {
-    if (!materiaActiva.value) return new Set();
+    if (!idMateriaActiva.value) return new Set();
     if (modoArbolCompleto.value) {
-        const full = getAncestrosRecursivos(materiaActiva.value.id);
-        full.delete(materiaActiva.value.id);
+        const full = getAncestrosRecursivos(idMateriaActiva.value);
+        full.delete(idMateriaActiva.value);
         return full;
     }
     const reqs = new Set();
-    const materia = materiasLocales.value.find(m => m.id === materiaActiva.value.id);
+    const materia = materiasLocales.value.find(m => m.id === idMateriaActiva.value);
     if (materia?.requisitos) {
         materia.requisitos.forEach(r => reqs.add(r.id));
     }
@@ -206,30 +207,32 @@ const idsRequisitosActiva = computed(() => {
 
 // IDs de materias que tienen a la materia activa como requisito (hacia adelante)
 const idsDesbloqueadasActiva = computed(() => {
-    if (!materiaActiva.value) return new Set();
+    if (!idMateriaActiva.value) return new Set();
     if (modoArbolCompleto.value) {
-        const full = getDescendientesRecursivos(materiaActiva.value.id);
-        full.delete(materiaActiva.value.id);
+        const full = getDescendientesRecursivos(idMateriaActiva.value);
+        full.delete(idMateriaActiva.value);
         return full;
     }
     const desbloqueadas = new Set();
     materiasLocales.value.forEach(m => {
-        if (m.requisitos?.some(r => r.id === materiaActiva.value.id)) {
+        if (m.requisitos?.some(r => r.id === idMateriaActiva.value)) {
             desbloqueadas.add(m.id);
         }
     });
     return desbloqueadas;
 });
 
-// Lista de objetos Materia para el HUD Inspector
-const listaRequisitosActiva = computed(() => {
-    if (!materiaActiva.value) return [];
-    return materiasLocales.value.filter(m => idsRequisitosActiva.value.has(m.id));
+// Lista de objetos Materia para el inspector
+const listaRequisitosSeleccionada = computed(() => {
+    if (!materiaSeleccionada.value) return [];
+    const ids = idsRequisitosActiva.value;
+    return materiasLocales.value.filter(m => ids.has(m.id));
 });
 
-const listaDesbloqueadasActiva = computed(() => {
-    if (!materiaActiva.value) return [];
-    return materiasLocales.value.filter(m => idsDesbloqueadasActiva.value.has(m.id));
+const listaDesbloqueadasSeleccionada = computed(() => {
+    if (!materiaSeleccionada.value) return [];
+    const ids = idsDesbloqueadasActiva.value;
+    return materiasLocales.value.filter(m => ids.has(m.id));
 });
 
 // Calcular las coordenadas exactas de las flechas SVG entre tarjetas
@@ -241,7 +244,6 @@ const recalcularFlechas = () => {
     const scrollLeft = container.scrollLeft;
     const scrollTop = container.scrollTop;
 
-    // Actualizar dimensiones del SVG para cubrir todo el lienzo
     svgWidth.value = Math.max(container.scrollWidth, container.clientWidth);
     svgHeight.value = Math.max(container.scrollHeight, container.clientHeight);
 
@@ -265,20 +267,18 @@ const recalcularFlechas = () => {
             const xOrigen = rectOrigen.right - containerRect.left + scrollLeft;
             const yOrigen = rectOrigen.top + (rectOrigen.height / 2) - containerRect.top + scrollTop;
 
-            // Curva de Bézier cúbica suave con punto de control adaptativo
             const dx = Math.max(40, (xDestino - xOrigen) / 2);
             const pathData = `M ${xOrigen} ${yOrigen} C ${xOrigen + dx} ${yOrigen}, ${xDestino - dx} ${yDestino}, ${xDestino} ${yDestino}`;
 
-            // Determinar estado de resaltado
             let tipoResaltado = 'normal';
-            if (materiaActiva.value) {
-                const esReqDirecto = (materia.id === materiaActiva.value.id && req.id === materiaActiva.value.id) || (materia.id === materiaActiva.value.id);
-                const esDesbloqueoDirecto = (req.id === materiaActiva.value.id);
+            if (idMateriaActiva.value) {
+                const esReqDirecto = (materia.id === idMateriaActiva.value);
+                const esDesbloqueoDirecto = (req.id === idMateriaActiva.value);
 
                 if (esReqDirecto || (modoArbolCompleto.value && idsRequisitosActiva.value.has(req.id) && idsRequisitosActiva.value.has(materia.id))) {
-                    tipoResaltado = 'requisito-previo'; // Viene de requisito obligatorio (Azul)
+                    tipoResaltado = 'requisito-previo';
                 } else if (esDesbloqueoDirecto || (modoArbolCompleto.value && idsDesbloqueadasActiva.value.has(req.id) && idsDesbloqueadasActiva.value.has(materia.id))) {
-                    tipoResaltado = 'desbloqueada'; // Desbloquea materias futuras (Verde)
+                    tipoResaltado = 'desbloqueada';
                 } else {
                     tipoResaltado = 'atenuado';
                 }
@@ -297,17 +297,8 @@ const recalcularFlechas = () => {
     lineasSvg.value = lineas;
 };
 
-// Eventos de selección e interactividad
+// Eventos de selección con CLICK (fijo, sin mover layout)
 const seleccionarMateria = (materia) => {
-    if (modoEnlace.value && materiaOrigenEnlace.value) {
-        if (materia.id === materiaOrigenEnlace.value.id) {
-            cancelarModoEnlace();
-            return;
-        }
-        conectarODesconectarRequisito(materiaOrigenEnlace.value.id, materia.id);
-        return;
-    }
-
     if (materiaSeleccionada.value?.id === materia.id) {
         materiaSeleccionada.value = null;
     } else {
@@ -316,18 +307,16 @@ const seleccionarMateria = (materia) => {
     nextTick(() => recalcularFlechas());
 };
 
+// Hover suave (solo ilumina líneas, NUNCA abre banners en la parte superior)
 const entrarHover = (materia) => {
-    if (!modoEnlace.value) {
-        materiaHover.value = materia;
-        nextTick(() => recalcularFlechas());
-    }
+    materiaHoverId.value = materia.id;
+    // Solo actualizamos clases de las flechas sin alterar altura del layout
+    recalcularFlechas();
 };
 
 const salirHover = () => {
-    if (!modoEnlace.value) {
-        materiaHover.value = null;
-        nextTick(() => recalcularFlechas());
-    }
+    materiaHoverId.value = null;
+    recalcularFlechas();
 };
 
 const enfocarMateria = (materiaId) => {
@@ -342,41 +331,51 @@ const enfocarMateria = (materiaId) => {
     }
 };
 
-const iniciarModoEnlace = (materia, event) => {
-    event.stopPropagation();
-    modoEnlace.value = true;
-    materiaOrigenEnlace.value = materia;
-    materiaSeleccionada.value = materia;
-    nextTick(() => recalcularFlechas());
+// MODAL DE GESTIÓN DE PRE-REQUISITOS (ESTRICTO NIVEL INFERIOR)
+const abrirModalRequisitos = (materia, event) => {
+    event?.stopPropagation();
+    materiaParaRequisitos.value = materia;
+    modalRequisitosVisible.value = true;
 };
 
-const cancelarModoEnlace = () => {
-    modoEnlace.value = false;
-    materiaOrigenEnlace.value = null;
+// Candidatos válidos: solo materias de la misma carrera que pertenezcan a niveles inferiores
+const candidatosRequisitos = computed(() => {
+    if (!materiaParaRequisitos.value) return [];
+    const nivelActual = materiaParaRequisitos.value.nivel;
+
+    // Solo materias con nivel estrictamente inferior (< nivelActual)
+    return materiasLocales.value
+        .filter(m => m.nivel < nivelActual)
+        .sort((a, b) => a.nivel - b.nivel || a.sigla.localeCompare(b.sigla));
+});
+
+const esRequisitoVinculado = (candidatoId) => {
+    if (!materiaParaRequisitos.value?.requisitos) return false;
+    return materiaParaRequisitos.value.requisitos.some(r => r.id === candidatoId);
 };
 
-// Conectar / Desconectar requisito en tiempo real con backend
-const conectarODesconectarRequisito = async (materiaId, requisitoId) => {
+const alternarRequisito = async (requisito) => {
+    if (!materiaParaRequisitos.value) return;
+
     try {
         const response = await axios.post(route('malla-curricular.toggle-requisito'), {
-            materia_id: materiaId,
-            requisito_id: requisitoId,
+            materia_id: materiaParaRequisitos.value.id,
+            requisito_id: requisito.id,
         });
 
         if (response.data.success) {
-            const index = materiasLocales.value.findIndex(m => m.id === materiaId);
+            const index = materiasLocales.value.findIndex(m => m.id === materiaParaRequisitos.value.id);
             if (index !== -1) {
                 materiasLocales.value[index] = response.data.materia;
-                if (materiaSeleccionada.value?.id === materiaId) {
+                materiaParaRequisitos.value = response.data.materia;
+                if (materiaSeleccionada.value?.id === materiaParaRequisitos.value.id) {
                     materiaSeleccionada.value = response.data.materia;
                 }
             }
             nextTick(() => recalcularFlechas());
         }
     } catch (error) {
-        console.error('Error al actualizar requisito:', error);
-    } finally {
-        cancelarModoEnlace();
+        alert(error.response?.data?.message || 'Error al actualizar el pre-requisito.');
     }
 };
 
@@ -439,12 +438,11 @@ const cambiarCarrera = (id) => {
     router.get(route('malla-curricular.index', { carrera_id: id }));
 };
 
-// Título de la etapa de carrera según el nivel
 const getEtapaNivel = (nivel) => {
-    if (nivel <= 2) return { nombre: 'Ciclo Básico / Fundamentos', grad: 'from-blue-600 to-indigo-600' };
-    if (nivel <= 5) return { nombre: 'Ciclo Formativo Central', grad: 'from-indigo-600 to-purple-600' };
-    if (nivel <= 7) return { nombre: 'Ciclo de Especialidad', grad: 'from-purple-600 to-pink-600' };
-    return { nombre: 'Graduación y Titulación', grad: 'from-pink-600 to-rose-600' };
+    if (nivel <= 2) return { nombre: 'Ciclo Básico / Fundamentos' };
+    if (nivel <= 5) return { nombre: 'Ciclo Formativo Central' };
+    if (nivel <= 7) return { nombre: 'Ciclo de Especialidad' };
+    return { nombre: 'Graduación y Titulación' };
 };
 
 // Lifecycle
@@ -475,7 +473,7 @@ onUnmounted(() => {
                             Malla Curricular: {{ carreraActiva?.nombre }}
                         </h2>
                         <p class="text-xs text-slate-500 dark:text-slate-400">
-                            Grafo interactivo de pre-requisitos con trazado vectorial dinámico.
+                            {{ totalNiveles }} semestres configurados. Grafo estable de pre-requisitos con trazado vectorial dinámico.
                         </p>
                     </div>
                 </div>
@@ -490,7 +488,7 @@ onUnmounted(() => {
                             class="text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 py-1.5 px-3 focus:ring-2 focus:ring-pink-500 font-semibold shadow-xs"
                         >
                             <option v-for="c in carreras" :key="c.id" :value="c.id">
-                                {{ c.codigo }} - {{ c.nombre }}
+                                {{ c.codigo }} - {{ c.nombre }} ({{ c.total_niveles }} semestres)
                             </option>
                         </select>
                     </div>
@@ -508,31 +506,31 @@ onUnmounted(() => {
         </template>
 
         <div class="py-6 px-4 sm:px-6 lg:px-8 space-y-4">
-            <!-- 1. HUD INSPECTOR INTERACTIVO DE RELACIONES (VITAL PARA LA FÁCIL INTUICIÓN) -->
+            <!-- 1. HUD INSPECTOR FIJO (SOLO SE ACTIVA AL HACER CLICK EN UNA MATERIA, NUNCA CON HOVER PARA EVITAR SALTOS) -->
             <div
-                v-if="materiaActiva"
-                class="p-4 rounded-2xl bg-white dark:bg-[#111827] border-2 border-indigo-500/40 dark:border-indigo-500/30 shadow-2xl transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                v-if="materiaSeleccionada"
+                class="p-4 rounded-2xl bg-white dark:bg-[#111827] border-2 border-pink-500/50 dark:border-pink-500/40 shadow-2xl transition-all duration-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
             >
                 <div class="flex items-center gap-3.5">
                     <div
                         :class="[
                             'w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg bg-gradient-to-tr font-black',
-                            getAreaInfo(materiaActiva).headerGradient
+                            getAreaInfo(materiaSeleccionada).headerGradient
                         ]"
                     >
-                        <i :class="[getAreaInfo(materiaActiva).icon, 'text-xl']"></i>
+                        <i :class="[getAreaInfo(materiaSeleccionada).icon, 'text-xl']"></i>
                     </div>
                     <div>
                         <div class="flex items-center gap-2">
                             <span class="px-2 py-0.5 rounded-md font-mono font-bold text-xs bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white">
-                                {{ materiaActiva.sigla }}
+                                {{ materiaSeleccionada.sigla }}
                             </span>
-                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
-                                {{ materiaActiva.nivel }}º Semestre
+                            <span class="text-xs px-2 py-0.5 rounded-full font-semibold bg-pink-500/10 text-pink-600 dark:text-pink-400">
+                                {{ materiaSeleccionada.nivel }}º Semestre
                             </span>
                         </div>
                         <h3 class="text-base font-black text-slate-900 dark:text-white mt-0.5">
-                            {{ materiaActiva.nombre }}
+                            {{ materiaSeleccionada.nombre }}
                         </h3>
                     </div>
                 </div>
@@ -542,11 +540,11 @@ onUnmounted(() => {
                     <!-- Requisitos Previos -->
                     <div class="space-y-1">
                         <span class="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1">
-                            <i class="pi pi-arrow-left text-[9px]"></i> Requisitos Previos ({{ listaRequisitosActiva.length }}):
+                            <i class="pi pi-arrow-left text-[9px]"></i> Requisitos Previos ({{ listaRequisitosSeleccionada.length }}):
                         </span>
                         <div class="flex flex-wrap gap-1">
                             <button
-                                v-for="req in listaRequisitosActiva"
+                                v-for="req in listaRequisitosSeleccionada"
                                 :key="req.id"
                                 @click="enfocarMateria(req.id)"
                                 class="px-2 py-1 rounded-lg text-xs font-mono font-bold bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 transition-colors cursor-pointer"
@@ -554,8 +552,8 @@ onUnmounted(() => {
                             >
                                 {{ req.sigla }} ({{ req.nivel }}º)
                             </button>
-                            <span v-if="listaRequisitosActiva.length === 0" class="text-xs text-slate-400 italic">
-                                Ninguno (Nivel inicial)
+                            <span v-if="listaRequisitosSeleccionada.length === 0" class="text-xs text-slate-400 italic">
+                                Ninguno (Materia inicial de nivel)
                             </span>
                         </div>
                     </div>
@@ -565,11 +563,11 @@ onUnmounted(() => {
                     <!-- Materias Desbloqueadas a Futuro -->
                     <div class="space-y-1">
                         <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                            Desbloquea a futuro ({{ listaDesbloqueadasActiva.length }}): <i class="pi pi-arrow-right text-[9px]"></i>
+                            Desbloquea a futuro ({{ listaDesbloqueadasSeleccionada.length }}): <i class="pi pi-arrow-right text-[9px]"></i>
                         </span>
                         <div class="flex flex-wrap gap-1">
                             <button
-                                v-for="des in listaDesbloqueadasActiva"
+                                v-for="des in listaDesbloqueadasSeleccionada"
                                 :key="des.id"
                                 @click="enfocarMateria(des.id)"
                                 class="px-2 py-1 rounded-lg text-xs font-mono font-bold bg-emerald-50 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer"
@@ -577,71 +575,55 @@ onUnmounted(() => {
                             >
                                 {{ des.sigla }} ({{ des.nivel }}º)
                             </button>
-                            <span v-if="listaDesbloqueadasActiva.length === 0" class="text-xs text-slate-400 italic">
+                            <span v-if="listaDesbloqueadasSeleccionada.length === 0" class="text-xs text-slate-400 italic">
                                 Último nivel / Terminal
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Controles del Inspector -->
+                <!-- Botón gestionar requisitos + cerrar -->
                 <div class="flex items-center gap-2 self-end lg:self-center">
-                    <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            v-model="modoArbolCompleto"
-                            @change="nextTick(() => recalcularFlechas())"
-                            class="rounded border-slate-300 text-pink-600 focus:ring-pink-500"
-                        />
-                        <span>Ruta Completa (Árbol)</span>
-                    </label>
-
+                    <Button
+                        label="Gestionar Requisitos"
+                        icon="pi pi-link"
+                        size="small"
+                        severity="info"
+                        @click="abrirModalRequisitos(materiaSeleccionada)"
+                        class="!text-xs font-bold"
+                    />
                     <Button
                         icon="pi pi-times"
                         severity="secondary"
                         text
                         rounded
                         size="small"
-                        @click="materiaSeleccionada = null; materiaHover = null; nextTick(() => recalcularFlechas())"
-                        title="Limpiar inspección"
+                        @click="materiaSeleccionada = null; nextTick(() => recalcularFlechas())"
+                        title="Cerrar inspección"
                     />
                 </div>
             </div>
 
-            <!-- 2. BARRA DE HERRAMIENTAS Y LEYENDA ULTRA INTUITIVA -->
+            <!-- 2. BARRA DE HERRAMIENTAS Y LEYENDA CLARA -->
             <div class="bg-white dark:bg-[#111827] rounded-2xl p-3.5 shadow-md border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4 text-xs">
-                <!-- Leyenda de colores con alto contraste -->
+                <!-- Leyenda de colores -->
                 <div class="flex items-center gap-4 flex-wrap">
                     <span class="font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider text-[11px]">
                         Flujo de Relaciones:
                     </span>
                     <div class="flex items-center gap-1.5">
                         <span class="w-3.5 h-3.5 rounded-full bg-blue-500 ring-4 ring-blue-500/20"></span>
-                        <span class="font-bold text-blue-600 dark:text-blue-400">Requisito Previo Obligatorio (⬅️ Entrante)</span>
+                        <span class="font-bold text-blue-600 dark:text-blue-400">Requisito Obligatorio (⬅️ Entrante)</span>
                     </div>
                     <div class="flex items-center gap-1.5">
                         <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
                         <span class="font-bold text-emerald-600 dark:text-emerald-400">Materia Desbloqueada (➡️ Saliente)</span>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <span class="w-3 h-3 rounded-full bg-slate-400"></span>
-                        <span class="text-slate-500 dark:text-slate-400">Ruta General</span>
-                    </div>
                 </div>
 
-                <!-- Estado del modo enlace interactivo -->
-                <div v-if="modoEnlace" class="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/80 px-3.5 py-1.5 rounded-xl border border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-300 animate-pulse font-bold">
-                    <i class="pi pi-link"></i>
-                    <span>
-                        Haz clic en el pre-requisito para vincular a <strong>{{ materiaOrigenEnlace?.sigla }}</strong>
-                    </span>
-                    <button @click="cancelarModoEnlace" class="ml-2 text-rose-600 hover:text-rose-700 font-black">
-                        Cancelar
-                    </button>
-                </div>
-                <div v-else class="text-slate-400 dark:text-slate-500 text-[11px] flex items-center gap-1.5">
-                    <i class="pi pi-info-circle text-indigo-500"></i>
-                    Pasa el cursor por cualquier tarjeta para <strong>iluminar su ruta en azul y verde</strong>.
+                <div class="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1.5">
+                    <i class="pi pi-info-circle text-pink-500"></i>
+                    Haz clic en cualquier materia para inspeccionar sus relaciones o en el icono <i class="pi pi-link mx-0.5"></i> para configurar requisitos de niveles inferiores.
                 </div>
             </div>
 
@@ -651,27 +633,23 @@ onUnmounted(() => {
                 @scroll="recalcularFlechas"
                 class="relative overflow-x-auto overflow-y-hidden bg-slate-100/70 dark:bg-[#070b13] rounded-3xl border border-slate-200 dark:border-slate-800 p-6 min-h-[720px] shadow-2xl select-none custom-scrollbar transition-colors"
             >
-                <!-- CAPA SVG DE FLECHAS DINÁMICAS (ALTO IMPACTO Y CONTRASTE) -->
+                <!-- CAPA SVG DE FLECHAS DINÁMICAS -->
                 <svg
                     class="absolute inset-0 pointer-events-none z-10"
                     :style="{ width: `${svgWidth}px`, height: `${svgHeight}px` }"
                 >
                     <defs>
-                        <!-- Marcador de flecha normal (Visible y nítida) -->
                         <marker id="arrow-normal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
                             <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b" />
                         </marker>
-                        <!-- Marcador de flecha requisito previo (Azul Eléctrico) -->
                         <marker id="arrow-previo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
                             <path d="M 0 1 L 9 5 L 0 9 z" fill="#3b82f6" />
                         </marker>
-                        <!-- Marcador de flecha desbloqueada (Verde Esmeralda) -->
                         <marker id="arrow-desbloqueada" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
                             <path d="M 0 1 L 9 5 L 0 9 z" fill="#10b981" />
                         </marker>
                     </defs>
 
-                    <!-- Renderizado de las rutas curvas Bézier -->
                     <g v-for="linea in lineasSvg" :key="linea.id">
                         <path
                             :d="linea.d"
@@ -749,19 +727,18 @@ onUnmounted(() => {
                                 @mouseleave="salirHover"
                                 :class="[
                                     'group relative rounded-2xl p-3.5 transition-all duration-200 cursor-pointer shadow-md select-none border',
-                                    // Acentos de área
                                     getAreaInfo(materia).borderAccent,
 
-                                    // Estado Seleccionada / Hover activa
-                                    materiaActiva?.id === materia.id
+                                    // Estado Seleccionada / Hover
+                                    materiaSeleccionada?.id === materia.id
                                         ? 'ring-3 ring-pink-500 bg-white dark:bg-slate-800 shadow-2xl scale-[1.03] z-30'
                                         : idsRequisitosActiva.has(materia.id)
                                         ? 'ring-2 ring-blue-500 bg-blue-50/90 dark:bg-blue-950/60 shadow-xl scale-[1.01] z-20'
                                         : idsDesbloqueadasActiva.has(materia.id)
                                         ? 'ring-2 ring-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/60 shadow-xl scale-[1.01] z-20'
-                                        : materiaActiva
-                                        ? 'opacity-35 bg-white/70 dark:bg-slate-900/60 border-slate-200/60 dark:border-slate-800'
-                                        : 'bg-white dark:bg-slate-900/90 hover:shadow-xl hover:-translate-y-1 border-slate-200/80 dark:border-slate-800'
+                                        : idMateriaActiva
+                                        ? 'opacity-40 bg-white/70 dark:bg-slate-900/60 border-slate-200/60 dark:border-slate-800'
+                                        : 'bg-white dark:bg-slate-900/90 hover:shadow-xl hover:-translate-y-0.5 border-slate-200/80 dark:border-slate-800'
                                 ]"
                             >
                                 <!-- Conector Puerto Izquierdo (Requisitos Entrantes) -->
@@ -817,12 +794,12 @@ onUnmounted(() => {
                                         </span>
                                     </div>
 
-                                    <!-- Botones de Acción (Vincular Requisito, Editar, Eliminar) -->
+                                    <!-- Botones de Acción -->
                                     <div class="flex items-center gap-1 opacity-90 group-hover:opacity-100">
                                         <button
-                                            @click="iniciarModoEnlace(materia, $event)"
+                                            @click="abrirModalRequisitos(materia, $event)"
                                             class="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors"
-                                            title="Vincular pre-requisito a esta materia"
+                                            title="Gestionar Pre-requisitos de esta materia"
                                         >
                                             <i class="pi pi-link text-[10px]"></i>
                                         </button>
@@ -858,12 +835,73 @@ onUnmounted(() => {
             </div>
         </div>
 
+        <!-- MODAL DEDICADO: GESTIÓN DE PRE-REQUISITOS (ESTRICTO NIVEL INFERIOR) -->
+        <Dialog
+            v-model:visible="modalRequisitosVisible"
+            modal
+            :header="`Configurar Pre-requisitos: [${materiaParaRequisitos?.sigla}] ${materiaParaRequisitos?.nombre}`"
+            class="w-full max-w-xl"
+        >
+            <div v-if="materiaParaRequisitos" class="space-y-4 pt-2">
+                <div class="p-3 bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 rounded-xl text-xs text-blue-900 dark:text-blue-200">
+                    <p class="font-bold flex items-center gap-1.5">
+                        <i class="pi pi-shield"></i>
+                        Regla de Pre-requisito: Solo Niveles Inferiores
+                    </p>
+                    <p class="text-[11px] text-blue-700 dark:text-blue-300 mt-1">
+                        Esta materia pertenece al <strong>{{ materiaParaRequisitos.nivel }}º Semestre</strong>. Por norma curricular, solo puedes vincular materias pertenecientes a semestres anteriores (Niveles 1 a {{ materiaParaRequisitos.nivel - 1 }}). Las materias del mismo nivel o niveles superiores quedan automáticamente excluidas para evitar ciclos y errores.
+                    </p>
+                </div>
+
+                <div v-if="materiaParaRequisitos.nivel === 1" class="text-center py-6 text-xs text-slate-400 border border-dashed rounded-xl">
+                    Esta materia pertenece al <strong>1º Semestre (Nivel Inicial)</strong>, por lo que no requiere ningún pre-requisito universitario.
+                </div>
+
+                <div v-else-if="candidatosRequisitos.length > 0" class="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl max-h-96 overflow-y-auto">
+                    <div
+                        v-for="cand in candidatosRequisitos"
+                        :key="cand.id"
+                        class="p-3 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-slate-800/40 text-xs transition-colors"
+                    >
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-black bg-slate-200 dark:bg-slate-800 font-mono">
+                                    {{ cand.sigla }}
+                                </span>
+                                <span class="font-bold text-slate-800 dark:text-slate-100">{{ cand.nombre }}</span>
+                            </div>
+                            <span class="text-[11px] text-slate-400">
+                                Pertenece al {{ cand.nivel }}º Semestre (Nivel Inferior Válido)
+                            </span>
+                        </div>
+
+                        <Button
+                            :icon="esRequisitoVinculado(cand.id) ? 'pi pi-check' : 'pi pi-plus'"
+                            :label="esRequisitoVinculado(cand.id) ? 'Vinculado' : 'Asignar'"
+                            size="small"
+                            :severity="esRequisitoVinculado(cand.id) ? 'success' : 'secondary'"
+                            @click="alternarRequisito(cand)"
+                            class="!text-xs font-bold"
+                        />
+                    </div>
+                </div>
+
+                <div v-else class="text-center py-6 text-xs text-slate-400 border border-dashed rounded-xl">
+                    No hay materias registradas en niveles inferiores a este semestre.
+                </div>
+            </div>
+
+            <template #footer>
+                <Button label="Listo" severity="primary" @click="modalRequisitosVisible = false" />
+            </template>
+        </Dialog>
+
         <!-- MODAL DE CREACIÓN / EDICIÓN DE MATERIA -->
         <Dialog
             v-model:visible="dialogVisible"
             modal
             :header="esEdicion ? 'Editar Materia Curricular' : 'Registrar Nueva Materia'"
-            :style="{ width: '90vw', maxWidth: '480px' }"
+            class="w-full max-w-md"
         >
             <div class="space-y-4 pt-2">
                 <div>
@@ -885,20 +923,18 @@ onUnmounted(() => {
                 <div>
                     <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Nota Mínima de Aprobación *</label>
                     <InputNumber v-model="materiaForm.nota_minima_aprobacion" :min="1" :max="100" class="w-full text-xs" />
-                    <p class="text-[11px] text-slate-400 mt-1">Generalmente 51 puntos para materias regulares o 61 puntos para talleres de grado / admisión.</p>
+                    <p class="text-[11px] text-slate-400 mt-1">Generalmente 51 puntos.</p>
                 </div>
             </div>
 
             <template #footer>
-                <div class="flex justify-end gap-2 pt-2">
-                    <Button label="Cancelar" severity="secondary" text @click="dialogVisible = false" />
-                    <Button
-                        :label="esEdicion ? 'Actualizar Materia' : 'Crear Materia'"
-                        icon="pi pi-check"
-                        @click="guardarMateria"
-                        class="!bg-gradient-to-r !from-pink-500 !to-rose-600 !border-0 font-bold"
-                    />
-                </div>
+                <Button label="Cancelar" severity="secondary" text @click="dialogVisible = false" />
+                <Button
+                    :label="esEdicion ? 'Actualizar Materia' : 'Crear Materia'"
+                    icon="pi pi-check"
+                    @click="guardarMateria"
+                    class="!bg-gradient-to-r !from-pink-500 !to-rose-600 !border-0 font-bold"
+                />
             </template>
         </Dialog>
     </AuthenticatedLayout>

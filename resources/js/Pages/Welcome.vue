@@ -1,386 +1,534 @@
 <script setup>
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Head, Link } from '@inertiajs/vue3';
+import Button from 'primevue/button';
+import Tag from 'primevue/tag';
+import Dialog from 'primevue/dialog';
 
-defineProps({
-    canLogin: {
-        type: Boolean,
+const props = defineProps({
+    canLogin: Boolean,
+    canRegister: Boolean,
+    institucion: {
+        type: Object,
+        default: () => ({}),
     },
-    canRegister: {
-        type: Boolean,
+    portadas: {
+        type: Array,
+        default: () => [],
     },
-    laravelVersion: {
-        type: String,
-        required: true,
+    autoridades: {
+        type: Array,
+        default: () => [],
     },
-    phpVersion: {
-        type: String,
-        required: true,
+    publicaciones: {
+        type: Array,
+        default: () => [],
+    },
+    carreras: {
+        type: Array,
+        default: () => [],
     },
 });
 
-function handleImageError() {
-    document.getElementById('screenshot-container')?.classList.add('!hidden');
-    document.getElementById('docs-card')?.classList.add('!row-span-1');
-    document.getElementById('docs-card-content')?.classList.add('!flex-row');
-    document.getElementById('background')?.classList.add('!hidden');
-}
+// Slider de Portadas
+const portadaActivaIndex = ref(0);
+let intervalId = null;
+
+onMounted(() => {
+    if (props.portadas.length > 1) {
+        intervalId = setInterval(() => {
+            portadaActivaIndex.value = (portadaActivaIndex.value + 1) % props.portadas.length;
+        }, 6000);
+    }
+});
+
+onUnmounted(() => {
+    if (intervalId) clearInterval(intervalId);
+});
+
+// Filtro de Comunicados y Noticias
+const filtroTipo = ref('todos'); // 'todos', 'Convocatoria', 'Comunicado', 'Noticia'
+
+const publicacionesFiltradas = ref([]);
+const actualizarFiltro = (tipo) => {
+    filtroTipo.value = tipo;
+};
+
+// Modal de Detalle de Publicación
+const modalPublicacionVisible = ref(false);
+const publicacionSeleccionada = ref(null);
+
+const verDetallePublicacion = (pub) => {
+    publicacionSeleccionada.value = pub;
+    modalPublicacionVisible.value = true;
+};
+
+// Dark mode toggle
+const isDark = ref(false);
+const toggleTheme = () => {
+    isDark.value = !isDark.value;
+    if (isDark.value) {
+        document.documentElement.classList.add('dark');
+    } else {
+        document.documentElement.classList.remove('dark');
+    }
+};
 </script>
 
 <template>
-    <Head title="Welcome" />
-    <div class="bg-gray-50 text-black/50 dark:bg-black dark:text-white/50">
-        <img
-            id="background"
-            class="absolute -left-20 top-0 max-w-[877px]"
-            src="https://laravel.com/assets/img/welcome/background.svg"
-        />
-        <div
-            class="relative flex min-h-screen flex-col items-center justify-center selection:bg-[#FF2D20] selection:text-white"
-        >
-            <div class="relative w-full max-w-2xl px-6 lg:max-w-7xl">
-                <header
-                    class="grid grid-cols-2 items-center gap-2 py-10 lg:grid-cols-3"
-                >
-                    <div class="flex lg:col-start-2 lg:justify-center">
-                        <svg
-                            class="h-12 w-auto text-white lg:h-16 lg:text-[#FF2D20]"
-                            viewBox="0 0 62 65"
-                            fill="none"
-                            xmlns="http://www.w3.org/2000/svg"
-                        >
-                            <path
-                                d="M61.8548 14.6253C61.8778 14.7102 61.8895 14.7978 61.8897 14.8858V28.5615C61.8898 28.737 61.8434 28.9095 61.7554 29.0614C61.6675 29.2132 61.5409 29.3392 61.3887 29.4265L49.9104 36.0351V49.1337C49.9104 49.4902 49.7209 49.8192 49.4118 49.9987L25.4519 63.7916C25.3971 63.8227 25.3372 63.8427 25.2774 63.8639C25.255 63.8714 25.2338 63.8851 25.2101 63.8913C25.0426 63.9354 24.8666 63.9354 24.6991 63.8913C24.6716 63.8838 24.6467 63.8689 24.6205 63.8589C24.5657 63.8389 24.5084 63.8215 24.456 63.7916L0.501061 49.9987C0.348882 49.9113 0.222437 49.7853 0.134469 49.6334C0.0465019 49.4816 0.000120578 49.3092 0 49.1337L0 8.10652C0 8.01678 0.0124642 7.92953 0.0348998 7.84477C0.0423783 7.8161 0.0598282 7.78993 0.0697995 7.76126C0.0884958 7.70891 0.105946 7.65531 0.133367 7.6067C0.152063 7.5743 0.179485 7.54812 0.20192 7.51821C0.230588 7.47832 0.256763 7.43719 0.290416 7.40229C0.319084 7.37362 0.356476 7.35243 0.388883 7.32751C0.425029 7.29759 0.457436 7.26518 0.498568 7.2415L12.4779 0.345059C12.6296 0.257786 12.8015 0.211853 12.9765 0.211853C13.1515 0.211853 13.3234 0.257786 13.475 0.345059L25.4531 7.2415H25.4556C25.4955 7.26643 25.5292 7.29759 25.5653 7.32626C25.5977 7.35119 25.6339 7.37362 25.6625 7.40104C25.6974 7.43719 25.7224 7.47832 25.7523 7.51821C25.7735 7.54812 25.8021 7.5743 25.8196 7.6067C25.8483 7.65656 25.8645 7.70891 25.8844 7.76126C25.8944 7.78993 25.9118 7.8161 25.9193 7.84602C25.9423 7.93096 25.954 8.01853 25.9542 8.10652V33.7317L35.9355 27.9844V14.8846C35.9355 14.7973 35.948 14.7088 35.9704 14.6253C35.9792 14.5954 35.9954 14.5692 36.0053 14.5405C36.0253 14.4882 36.0427 14.4346 36.0702 14.386C36.0888 14.3536 36.1163 14.3274 36.1375 14.2975C36.1674 14.2576 36.1923 14.2165 36.2272 14.1816C36.2559 14.1529 36.292 14.1317 36.3244 14.1068C36.3618 14.0769 36.3942 14.0445 36.4341 14.0208L48.4147 7.12434C48.5663 7.03694 48.7383 6.99094 48.9133 6.99094C49.0883 6.99094 49.2602 7.03694 49.4118 7.12434L61.3899 14.0208C61.4323 14.0457 61.4647 14.0769 61.5021 14.1055C61.5333 14.1305 61.5694 14.1529 61.5981 14.1803C61.633 14.2165 61.6579 14.2576 61.6878 14.2975C61.7103 14.3274 61.7377 14.3536 61.7551 14.386C61.7838 14.4346 61.8 14.4882 61.8199 14.5405C61.8312 14.5692 61.8474 14.5954 61.8548 14.6253ZM59.893 27.9844V16.6121L55.7013 19.0252L49.9104 22.3593V33.7317L59.8942 27.9844H59.893ZM47.9149 48.5566V37.1768L42.2187 40.4299L25.953 49.7133V61.2003L47.9149 48.5566ZM1.99677 9.83281V48.5566L23.9562 61.199V49.7145L12.4841 43.2219L12.4804 43.2194L12.4754 43.2169C12.4368 43.1945 12.4044 43.1621 12.3682 43.1347C12.3371 43.1097 12.3009 43.0898 12.2735 43.0624L12.271 43.0586C12.2386 43.0275 12.2162 42.9888 12.1887 42.9539C12.1638 42.9203 12.1339 42.8916 12.114 42.8567L12.1127 42.853C12.0903 42.8156 12.0766 42.7707 12.0604 42.7283C12.0442 42.6909 12.023 42.656 12.013 42.6161C12.0005 42.5688 11.998 42.5177 11.9931 42.4691C11.9881 42.4317 11.9781 42.3943 11.9781 42.3569V15.5801L6.18848 12.2446L1.99677 9.83281ZM12.9777 2.36177L2.99764 8.10652L12.9752 13.8513L22.9541 8.10527L12.9752 2.36177H12.9777ZM18.1678 38.2138L23.9574 34.8809V9.83281L19.7657 12.2459L13.9749 15.5801V40.6281L18.1678 38.2138ZM48.9133 9.14105L38.9344 14.8858L48.9133 20.6305L58.8909 14.8846L48.9133 9.14105ZM47.9149 22.3593L42.124 19.0252L37.9323 16.6121V27.9844L43.7219 31.3174L47.9149 33.7317V22.3593ZM24.9533 47.987L39.59 39.631L46.9065 35.4555L36.9352 29.7145L25.4544 36.3242L14.9907 42.3482L24.9533 47.987Z"
-                                fill="currentColor"
-                            />
-                        </svg>
+    <Head :title="`${institucion?.nombre || 'Facultad de Tecnología'} - Portal Oficial`" />
+
+    <div class="min-h-screen bg-slate-50 dark:bg-[#070b13] text-slate-800 dark:text-slate-100 selection:bg-pink-500 selection:text-white transition-colors duration-200">
+        <!-- ============================================================== -->
+        <!-- 1. HEADER INSTITUCIONAL Y NAVBAR GLASSMORPHISM                -->
+        <!-- ============================================================== -->
+        <header class="sticky top-0 z-50 bg-white/90 dark:bg-[#111827]/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+                <!-- LOGO E IDENTIDAD -->
+                <a href="#inicio" class="flex items-center gap-3 group">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-pink-500 via-rose-500 to-amber-400 flex items-center justify-center shadow-lg shadow-pink-500/25 group-hover:scale-105 transition-transform">
+                        <i class="pi pi-graduation-cap text-2xl text-white"></i>
                     </div>
-                    <nav v-if="canLogin" class="-mx-3 flex flex-1 justify-end">
+                    <div>
+                        <span class="text-xs font-black uppercase tracking-wider bg-gradient-to-r from-pink-600 to-rose-600 dark:from-pink-400 dark:to-rose-400 bg-clip-text text-transparent block">
+                            {{ institucion?.sigla || 'FAC-TEC' }}
+                        </span>
+                        <h1 class="text-sm font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                            {{ institucion?.nombre || 'Facultad de Ciencia y Tecnología' }}
+                        </h1>
+                    </div>
+                </a>
+
+                <!-- NAVEGACIÓN PRINCIPAL -->
+                <nav class="hidden lg:flex items-center gap-6 text-xs font-bold text-slate-600 dark:text-slate-300">
+                    <a href="#inicio" class="hover:text-pink-600 dark:hover:text-pink-400 transition-colors">Inicio</a>
+                    <a href="#nosotros" class="hover:text-pink-600 dark:hover:text-pink-400 transition-colors">Historia & Misión</a>
+                    <a href="#autoridades" class="hover:text-pink-600 dark:hover:text-pink-400 transition-colors">Autoridades</a>
+                    <a href="#comunicados" class="hover:text-pink-600 dark:hover:text-pink-400 transition-colors">Comunicados</a>
+                    <a href="#carreras" class="hover:text-pink-600 dark:hover:text-pink-400 transition-colors">Carreras</a>
+                    <a href="#contacto" class="hover:text-pink-600 dark:hover:text-pink-400 transition-colors">Contacto</a>
+                </nav>
+
+                <!-- BOTONES DE ACCIÓN (POSTULAR / INGRESAR) -->
+                <div class="flex items-center gap-2.5">
+                    <button
+                        @click="toggleTheme"
+                        class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-pink-600 dark:hover:text-pink-400 transition-colors"
+                        title="Modo Oscuro / Claro"
+                    >
+                        <i :class="isDark ? 'pi pi-sun text-amber-400' : 'pi pi-moon text-indigo-400'"></i>
+                    </button>
+
+                    <!-- BOTÓN POSTULACIÓN -->
+                    <Link
+                        href="/login?tab=postular"
+                        class="px-3.5 py-2 rounded-xl text-xs font-black bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-all shadow-xs flex items-center gap-1.5"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></span>
+                        <span>Postular</span>
+                    </Link>
+
+                    <!-- BOTÓN INGRESAR AL SISTEMA -->
+                    <Link
+                        href="/login"
+                        class="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-md shadow-pink-500/25 transition-all flex items-center gap-1.5"
+                    >
+                        <i class="pi pi-sign-in text-xs"></i>
+                        <span>Ingresar</span>
+                    </Link>
+                </div>
+            </div>
+        </header>
+
+        <!-- ============================================================== -->
+        <!-- 2. HERO SECTION / PORTADAS (INSPIRADO EN LA REFERENCIA)        -->
+        <!-- ============================================================== -->
+        <section id="inicio" class="relative overflow-hidden bg-gradient-to-b from-slate-900 via-[#111827] to-[#0b0f19] text-white py-20 lg:py-28">
+            <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-pink-500/20 via-transparent to-transparent pointer-events-none"></div>
+
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="max-w-3xl space-y-6">
+                    <!-- BADGE DE LA PORTADA ACTIVA -->
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-pink-300 text-xs font-bold uppercase tracking-wider">
+                        <i class="pi pi-bolt text-xs text-amber-400"></i>
+                        <span>{{ portadas[portadaActivaIndex]?.badge || 'Convocatoria Abierta' }}</span>
+                    </div>
+
+                    <!-- TÍTULO DINÁMICO DE LA PORTADA -->
+                    <h2 class="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] bg-gradient-to-r from-white via-slate-100 to-pink-200 bg-clip-text text-transparent">
+                        {{ portadas[portadaActivaIndex]?.titulo || 'Formando Líderes en Ciencia, Tecnología e Innovación' }}
+                    </h2>
+
+                    <!-- SUBTÍTULO -->
+                    <p class="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
+                        {{ portadas[portadaActivaIndex]?.subtitulo || 'Desarrolla competencias científicas y profesionales de vanguardia en Ingeniería de Sistemas, Informática y Telecomunicaciones.' }}
+                    </p>
+
+                    <!-- BOTONES HERO -->
+                    <div class="flex flex-wrap items-center gap-3 pt-4">
                         <Link
-                            v-if="$page.props.auth.user"
-                            :href="route('dashboard')"
-                            class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
+                            :href="portadas[portadaActivaIndex]?.link_url || '/login?tab=postular'"
+                            class="px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-black bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 text-white shadow-xl shadow-pink-500/30 transition-all flex items-center gap-2 group"
                         >
-                            Dashboard
+                            <span>{{ portadas[portadaActivaIndex]?.link_texto || 'Postúlate al Examen de Admisión' }}</span>
+                            <i class="pi pi-arrow-right text-xs group-hover:translate-x-1 transition-transform"></i>
                         </Link>
 
-                        <template v-else>
-                            <Link
-                                :href="route('login')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                            >
-                                Log in
-                            </Link>
-
-                            <Link
-                                v-if="canRegister"
-                                :href="route('register')"
-                                class="rounded-md px-3 py-2 text-black ring-1 ring-transparent transition hover:text-black/70 focus:outline-none focus-visible:ring-[#FF2D20] dark:text-white dark:hover:text-white/80 dark:focus-visible:ring-white"
-                            >
-                                Register
-                            </Link>
-                        </template>
-                    </nav>
-                </header>
-
-                <main class="mt-6">
-                    <div class="grid gap-6 lg:grid-cols-2 lg:gap-8">
                         <a
-                            href="https://laravel.com/docs"
-                            id="docs-card"
-                            class="flex flex-col items-start gap-6 overflow-hidden rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] transition duration-300 hover:text-black/70 hover:ring-black/20 focus:outline-none focus-visible:ring-[#FF2D20] md:row-span-3 lg:p-10 lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:text-white/70 dark:hover:ring-zinc-700 dark:focus-visible:ring-[#FF2D20]"
+                            href="#carreras"
+                            class="px-6 py-3.5 rounded-2xl text-xs sm:text-sm font-bold bg-white/10 hover:bg-white/15 text-white backdrop-blur-md border border-white/20 transition-all flex items-center gap-2"
                         >
-                            <div
-                                id="screenshot-container"
-                                class="relative flex w-full flex-1 items-stretch"
-                            >
-                                <img
-                                    src="https://laravel.com/assets/img/welcome/docs-light.svg"
-                                    alt="Laravel documentation screenshot"
-                                    class="aspect-video h-full w-full flex-1 rounded-[10px] object-cover object-top drop-shadow-[0px_4px_34px_rgba(0,0,0,0.06)] dark:hidden"
-                                    @error="handleImageError"
-                                />
-                                <img
-                                    src="https://laravel.com/assets/img/welcome/docs-dark.svg"
-                                    alt="Laravel documentation screenshot"
-                                    class="hidden aspect-video h-full w-full flex-1 rounded-[10px] object-cover object-top drop-shadow-[0px_4px_34px_rgba(0,0,0,0.25)] dark:block"
-                                />
-                                <div
-                                    class="absolute -bottom-16 -left-16 h-40 w-[calc(100%+8rem)] bg-gradient-to-b from-transparent via-white to-white dark:via-zinc-900 dark:to-zinc-900"
-                                ></div>
-                            </div>
-
-                            <div
-                                class="relative flex items-center gap-6 lg:items-end"
-                            >
-                                <div
-                                    id="docs-card-content"
-                                    class="flex items-start gap-6 lg:flex-col"
-                                >
-                                    <div
-                                        class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16"
-                                    >
-                                        <svg
-                                            class="size-5 sm:size-6"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                fill="#FF2D20"
-                                                d="M23 4a1 1 0 0 0-1.447-.894L12.224 7.77a.5.5 0 0 1-.448 0L2.447 3.106A1 1 0 0 0 1 4v13.382a1.99 1.99 0 0 0 1.105 1.79l9.448 4.728c.14.065.293.1.447.1.154-.005.306-.04.447-.105l9.453-4.724a1.99 1.99 0 0 0 1.1-1.789V4ZM3 6.023a.25.25 0 0 1 .362-.223l7.5 3.75a.251.251 0 0 1 .138.223v11.2a.25.25 0 0 1-.362.224l-7.5-3.75a.25.25 0 0 1-.138-.22V6.023Zm18 11.2a.25.25 0 0 1-.138.224l-7.5 3.75a.249.249 0 0 1-.329-.099.249.249 0 0 1-.033-.12V9.772a.251.251 0 0 1 .138-.224l7.5-3.75a.25.25 0 0 1 .362.224v11.2Z"
-                                            />
-                                            <path
-                                                fill="#FF2D20"
-                                                d="m3.55 1.893 8 4.048a1.008 1.008 0 0 0 .9 0l8-4.048a1 1 0 0 0-.9-1.785l-7.322 3.706a.506.506 0 0 1-.452 0L4.454.108a1 1 0 0 0-.9 1.785H3.55Z"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <div class="pt-3 sm:pt-5 lg:pt-0">
-                                        <h2
-                                            class="text-xl font-semibold text-black dark:text-white"
-                                        >
-                                            Documentation
-                                        </h2>
-
-                                        <p class="mt-4 text-sm/relaxed">
-                                            Laravel has wonderful documentation
-                                            covering every aspect of the
-                                            framework. Whether you are a
-                                            newcomer or have prior experience
-                                            with Laravel, we recommend reading
-                                            our documentation from beginning to
-                                            end.
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <svg
-                                    class="size-6 shrink-0 stroke-[#FF2D20]"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke-width="1.5"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
-                                    />
-                                </svg>
-                            </div>
+                            <i class="pi pi-sitemap text-xs text-pink-400"></i>
+                            <span>Conoce las Carreras</span>
                         </a>
+                    </div>
+                </div>
 
-                        <a
-                            href="https://laracasts.com"
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] transition duration-300 hover:text-black/70 hover:ring-black/20 focus:outline-none focus-visible:ring-[#FF2D20] lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:text-white/70 dark:hover:ring-zinc-700 dark:focus-visible:ring-[#FF2D20]"
-                        >
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16"
-                            >
-                                <svg
-                                    class="size-5 sm:size-6"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <g fill="#FF2D20">
-                                        <path
-                                            d="M24 8.25a.5.5 0 0 0-.5-.5H.5a.5.5 0 0 0-.5.5v12a2.5 2.5 0 0 0 2.5 2.5h19a2.5 2.5 0 0 0 2.5-2.5v-12Zm-7.765 5.868a1.221 1.221 0 0 1 0 2.264l-6.626 2.776A1.153 1.153 0 0 1 8 18.123v-5.746a1.151 1.151 0 0 1 1.609-1.035l6.626 2.776ZM19.564 1.677a.25.25 0 0 0-.177-.427H15.6a.106.106 0 0 0-.072.03l-4.54 4.543a.25.25 0 0 0 .177.427h3.783c.027 0 .054-.01.073-.03l4.543-4.543ZM22.071 1.318a.047.047 0 0 0-.045.013l-4.492 4.492a.249.249 0 0 0 .038.385.25.25 0 0 0 .14.042h5.784a.5.5 0 0 0 .5-.5v-2a2.5 2.5 0 0 0-1.925-2.432ZM13.014 1.677a.25.25 0 0 0-.178-.427H9.101a.106.106 0 0 0-.073.03l-4.54 4.543a.25.25 0 0 0 .177.427H8.4a.106.106 0 0 0 .073-.03l4.54-4.543ZM6.513 1.677a.25.25 0 0 0-.177-.427H2.5A2.5 2.5 0 0 0 0 3.75v2a.5.5 0 0 0 .5.5h1.4a.106.106 0 0 0 .073-.03l4.54-4.543Z"
-                                        />
-                                    </g>
-                                </svg>
-                            </div>
+                <!-- SELECTOR DE SLIDES (PUNTOS INDICADORES) -->
+                <div v-if="portadas.length > 1" class="flex items-center gap-2 pt-12">
+                    <button
+                        v-for="(_, idx) in portadas"
+                        :key="idx"
+                        @click="portadaActivaIndex = idx"
+                        :class="[
+                            'h-2 rounded-full transition-all duration-300',
+                            portadaActivaIndex === idx ? 'w-8 bg-pink-500' : 'w-2 bg-white/30 hover:bg-white/50'
+                        ]"
+                        :title="`Ver portada ${idx + 1}`"
+                    ></button>
+                </div>
+            </div>
+        </section>
 
-                            <div class="pt-3 sm:pt-5">
-                                <h2
-                                    class="text-xl font-semibold text-black dark:text-white"
-                                >
-                                    Laracasts
-                                </h2>
+        <!-- ============================================================== -->
+        <!-- 3. SOBRE NOSOTROS: HISTORIA, MISIÓN Y VISIÓN                   -->
+        <!-- ============================================================== -->
+        <section id="nosotros" class="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+            <div class="text-center max-w-2xl mx-auto space-y-2">
+                <span class="text-xs font-black uppercase tracking-widest text-pink-600 dark:text-pink-400">
+                    Trayectoria y Compromiso
+                </span>
+                <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                    Historia, Misión y Visión Institucional
+                </h3>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                    Conoce nuestros pilares académicos y el compromiso formativo que impulsa a nuestra comunidad.
+                </p>
+            </div>
 
-                                <p class="mt-4 text-sm/relaxed">
-                                    Laracasts offers thousands of video
-                                    tutorials on Laravel, PHP, and JavaScript
-                                    development. Check them out, see for
-                                    yourself, and massively level up your
-                                    development skills in the process.
-                                </p>
-                            </div>
+            <!-- TARJETA HISTORIA -->
+            <div class="p-6 sm:p-10 rounded-3xl bg-white dark:bg-[#111827] shadow-xl border border-slate-200/80 dark:border-slate-800 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                <div class="lg:col-span-8 space-y-4">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 font-bold text-xs">
+                        <i class="pi pi-history"></i> Reseña Histórica
+                    </div>
+                    <h4 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-snug">
+                        Comprometidos con el desarrollo científico y la transformación productiva
+                    </h4>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {{ institucion?.historia || 'Nuestra institución académica nació con el firme propósito de democratizar la educación superior de excelencia y formar profesionales de alta competitividad científica, tecnológica y con profundo compromiso social. A lo largo de los años nos hemos consolidado como un referente regional y nacional en investigación aplicada, innovación en software, redes inteligentes y automatización industrial.' }}
+                    </p>
+                </div>
 
-                            <svg
-                                class="size-6 shrink-0 self-center stroke-[#FF2D20]"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke-width="1.5"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
-                                />
-                            </svg>
-                        </a>
-
-                        <a
-                            href="https://laravel-news.com"
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] transition duration-300 hover:text-black/70 hover:ring-black/20 focus:outline-none focus-visible:ring-[#FF2D20] lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800 dark:hover:text-white/70 dark:hover:ring-zinc-700 dark:focus-visible:ring-[#FF2D20]"
-                        >
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16"
-                            >
-                                <svg
-                                    class="size-5 sm:size-6"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <g fill="#FF2D20">
-                                        <path
-                                            d="M8.75 4.5H5.5c-.69 0-1.25.56-1.25 1.25v4.75c0 .69.56 1.25 1.25 1.25h3.25c.69 0 1.25-.56 1.25-1.25V5.75c0-.69-.56-1.25-1.25-1.25Z"
-                                        />
-                                        <path
-                                            d="M24 10a3 3 0 0 0-3-3h-2V2.5a2 2 0 0 0-2-2H2a2 2 0 0 0-2 2V20a3.5 3.5 0 0 0 3.5 3.5h17A3.5 3.5 0 0 0 24 20V10ZM3.5 21.5A1.5 1.5 0 0 1 2 20V3a.5.5 0 0 1 .5-.5h14a.5.5 0 0 1 .5.5v17c0 .295.037.588.11.874a.5.5 0 0 1-.484.625L3.5 21.5ZM22 20a1.5 1.5 0 1 1-3 0V9.5a.5.5 0 0 1 .5-.5H21a1 1 0 0 1 1 1v10Z"
-                                        />
-                                        <path
-                                            d="M12.751 6.047h2a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-2A.75.75 0 0 1 12 7.3v-.5a.75.75 0 0 1 .751-.753ZM12.751 10.047h2a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-2A.75.75 0 0 1 12 11.3v-.5a.75.75 0 0 1 .751-.753ZM4.751 14.047h10a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-10A.75.75 0 0 1 4 15.3v-.5a.75.75 0 0 1 .751-.753ZM4.75 18.047h7.5a.75.75 0 0 1 .75.75v.5a.75.75 0 0 1-.75.75h-7.5A.75.75 0 0 1 4 19.3v-.5a.75.75 0 0 1 .75-.753Z"
-                                        />
-                                    </g>
-                                </svg>
-                            </div>
-
-                            <div class="pt-3 sm:pt-5">
-                                <h2
-                                    class="text-xl font-semibold text-black dark:text-white"
-                                >
-                                    Laravel News
-                                </h2>
-
-                                <p class="mt-4 text-sm/relaxed">
-                                    Laravel News is a community driven portal
-                                    and newsletter aggregating all of the latest
-                                    and most important news in the Laravel
-                                    ecosystem, including new package releases
-                                    and tutorials.
-                                </p>
-                            </div>
-
-                            <svg
-                                class="size-6 shrink-0 self-center stroke-[#FF2D20]"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke-width="1.5"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75"
-                                />
-                            </svg>
-                        </a>
-
-                        <div
-                            class="flex items-start gap-4 rounded-lg bg-white p-6 shadow-[0px_14px_34px_0px_rgba(0,0,0,0.08)] ring-1 ring-white/[0.05] lg:pb-10 dark:bg-zinc-900 dark:ring-zinc-800"
-                        >
-                            <div
-                                class="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#FF2D20]/10 sm:size-16"
-                            >
-                                <svg
-                                    class="size-5 sm:size-6"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <g fill="#FF2D20">
-                                        <path
-                                            d="M16.597 12.635a.247.247 0 0 0-.08-.237 2.234 2.234 0 0 1-.769-1.68c.001-.195.03-.39.084-.578a.25.25 0 0 0-.09-.267 8.8 8.8 0 0 0-4.826-1.66.25.25 0 0 0-.268.181 2.5 2.5 0 0 1-2.4 1.824.045.045 0 0 0-.045.037 12.255 12.255 0 0 0-.093 3.86.251.251 0 0 0 .208.214c2.22.366 4.367 1.08 6.362 2.118a.252.252 0 0 0 .32-.079 10.09 10.09 0 0 0 1.597-3.733ZM13.616 17.968a.25.25 0 0 0-.063-.407A19.697 19.697 0 0 0 8.91 15.98a.25.25 0 0 0-.287.325c.151.455.334.898.548 1.328.437.827.981 1.594 1.619 2.28a.249.249 0 0 0 .32.044 29.13 29.13 0 0 0 2.506-1.99ZM6.303 14.105a.25.25 0 0 0 .265-.274 13.048 13.048 0 0 1 .205-4.045.062.062 0 0 0-.022-.07 2.5 2.5 0 0 1-.777-.982.25.25 0 0 0-.271-.149 11 11 0 0 0-5.6 2.815.255.255 0 0 0-.075.163c-.008.135-.02.27-.02.406.002.8.084 1.598.246 2.381a.25.25 0 0 0 .303.193 19.924 19.924 0 0 1 5.746-.438ZM9.228 20.914a.25.25 0 0 0 .1-.393 11.53 11.53 0 0 1-1.5-2.22 12.238 12.238 0 0 1-.91-2.465.248.248 0 0 0-.22-.187 18.876 18.876 0 0 0-5.69.33.249.249 0 0 0-.179.336c.838 2.142 2.272 4 4.132 5.353a.254.254 0 0 0 .15.048c1.41-.01 2.807-.282 4.117-.802ZM18.93 12.957l-.005-.008a.25.25 0 0 0-.268-.082 2.21 2.21 0 0 1-.41.081.25.25 0 0 0-.217.2c-.582 2.66-2.127 5.35-5.75 7.843a.248.248 0 0 0-.09.299.25.25 0 0 0 .065.091 28.703 28.703 0 0 0 2.662 2.12.246.246 0 0 0 .209.037c2.579-.701 4.85-2.242 6.456-4.378a.25.25 0 0 0 .048-.189 13.51 13.51 0 0 0-2.7-6.014ZM5.702 7.058a.254.254 0 0 0 .2-.165A2.488 2.488 0 0 1 7.98 5.245a.093.093 0 0 0 .078-.062 19.734 19.734 0 0 1 3.055-4.74.25.25 0 0 0-.21-.41 12.009 12.009 0 0 0-10.4 8.558.25.25 0 0 0 .373.281 12.912 12.912 0 0 1 4.826-1.814ZM10.773 22.052a.25.25 0 0 0-.28-.046c-.758.356-1.55.635-2.365.833a.25.25 0 0 0-.022.48c1.252.43 2.568.65 3.893.65.1 0 .2 0 .3-.008a.25.25 0 0 0 .147-.444c-.526-.424-1.1-.917-1.673-1.465ZM18.744 8.436a.249.249 0 0 0 .15.228 2.246 2.246 0 0 1 1.352 2.054c0 .337-.08.67-.23.972a.25.25 0 0 0 .042.28l.007.009a15.016 15.016 0 0 1 2.52 4.6.25.25 0 0 0 .37.132.25.25 0 0 0 .096-.114c.623-1.464.944-3.039.945-4.63a12.005 12.005 0 0 0-5.78-10.258.25.25 0 0 0-.373.274c.547 2.109.85 4.274.901 6.453ZM9.61 5.38a.25.25 0 0 0 .08.31c.34.24.616.561.8.935a.25.25 0 0 0 .3.127.631.631 0 0 1 .206-.034c2.054.078 4.036.772 5.69 1.991a.251.251 0 0 0 .267.024c.046-.024.093-.047.141-.067a.25.25 0 0 0 .151-.23A29.98 29.98 0 0 0 15.957.764a.25.25 0 0 0-.16-.164 11.924 11.924 0 0 0-2.21-.518.252.252 0 0 0-.215.076A22.456 22.456 0 0 0 9.61 5.38Z"
-                                        />
-                                    </g>
-                                </svg>
-                            </div>
-
-                            <div class="pt-3 sm:pt-5">
-                                <h2
-                                    class="text-xl font-semibold text-black dark:text-white"
-                                >
-                                    Vibrant Ecosystem
-                                </h2>
-
-                                <p class="mt-4 text-sm/relaxed">
-                                    Laravel's robust library of first-party
-                                    tools and libraries, such as
-                                    <a
-                                        href="https://forge.laravel.com"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white dark:focus-visible:ring-[#FF2D20]"
-                                        >Forge</a
-                                    >,
-                                    <a
-                                        href="https://vapor.laravel.com"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Vapor</a
-                                    >,
-                                    <a
-                                        href="https://nova.laravel.com"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Nova</a
-                                    >,
-                                    <a
-                                        href="https://envoyer.io"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Envoyer</a
-                                    >, and
-                                    <a
-                                        href="https://herd.laravel.com"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Herd</a
-                                    >
-                                    help you take your projects to the next
-                                    level. Pair them with powerful open source
-                                    libraries like
-                                    <a
-                                        href="https://laravel.com/docs/billing"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Cashier</a
-                                    >,
-                                    <a
-                                        href="https://laravel.com/docs/dusk"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Dusk</a
-                                    >,
-                                    <a
-                                        href="https://laravel.com/docs/broadcasting"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Echo</a
-                                    >,
-                                    <a
-                                        href="https://laravel.com/docs/horizon"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Horizon</a
-                                    >,
-                                    <a
-                                        href="https://laravel.com/docs/sanctum"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Sanctum</a
-                                    >,
-                                    <a
-                                        href="https://laravel.com/docs/telescope"
-                                        class="rounded-sm underline hover:text-black focus:outline-none focus-visible:ring-1 focus-visible:ring-[#FF2D20] dark:hover:text-white"
-                                        >Telescope</a
-                                    >, and more.
-                                </p>
-                            </div>
+                <div class="lg:col-span-4 bg-gradient-to-tr from-pink-500/10 via-rose-500/10 to-amber-500/10 dark:from-pink-950/40 dark:to-slate-800/60 p-6 rounded-2xl border border-pink-500/20 space-y-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-pink-500 text-white flex items-center justify-center font-black">
+                            <i class="pi pi-verified"></i>
+                        </div>
+                        <div>
+                            <div class="text-base font-black text-slate-900 dark:text-white">Acreditación</div>
+                            <div class="text-xs text-slate-500">Comisión de Calidad Curricular</div>
                         </div>
                     </div>
-                </main>
-
-                <footer
-                    class="py-16 text-center text-sm text-black dark:text-white/70"
-                >
-                    Laravel v{{ laravelVersion }} (PHP v{{ phpVersion }})
-                </footer>
+                    <div class="space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                        <div>✓ Mallas actualizadas con correlatividad estricta.</div>
+                        <div>✓ Laboratorios equipados para software y hardware.</div>
+                        <div>✓ Cuerpo docente con maestría y doctorado.</div>
+                    </div>
+                </div>
             </div>
-        </div>
+
+            <!-- TARJETAS GEMELAS: MISIÓN Y VISIÓN -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- MISIÓN -->
+                <div class="p-8 rounded-3xl bg-white dark:bg-[#111827] shadow-xl border border-slate-200/80 dark:border-slate-800 relative overflow-hidden group hover:border-indigo-500/50 transition-all">
+                    <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4 text-xl">
+                        <i class="pi pi-compass"></i>
+                    </div>
+                    <h4 class="text-lg font-black text-slate-900 dark:text-white mb-2">
+                        Nuestra Misión
+                    </h4>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {{ institucion?.mision || 'Formar profesionales idóneos de excelencia académica, científica, ética y tecnológica con liderazgo e innovación, capaces de proponer soluciones pertinentes a las demandas del desarrollo productivo y social sostenible.' }}
+                    </p>
+                </div>
+
+                <!-- VISIÓN -->
+                <div class="p-8 rounded-3xl bg-white dark:bg-[#111827] shadow-xl border border-slate-200/80 dark:border-slate-800 relative overflow-hidden group hover:border-pink-500/50 transition-all">
+                    <div class="w-12 h-12 rounded-2xl bg-pink-500/10 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-4 text-xl">
+                        <i class="pi pi-eye"></i>
+                    </div>
+                    <h4 class="text-lg font-black text-slate-900 dark:text-white mb-2">
+                        Nuestra Visión
+                    </h4>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                        {{ institucion?.vision || 'Ser una institución universitaria líder y acreditada a nivel nacional e internacional, reconocida por su excelencia académica, la rigurosidad de sus investigaciones y el impacto transformador de sus graduados en la sociedad.' }}
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 4. AUTORIDADES DE LA INSTITUCIÓN                               -->
+        <!-- ============================================================== -->
+        <section id="autoridades" class="py-16 sm:py-24 bg-slate-100/70 dark:bg-[#0c101d] border-y border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                <div class="text-center max-w-2xl mx-auto space-y-2">
+                    <span class="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
+                        Liderazgo Académico
+                    </span>
+                    <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Autoridades de la Carrera y Gestión
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                        Cuerpo directivo comprometido con la excelencia académica y la administración transparente.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div
+                        v-for="a in autoridades"
+                        :key="a.id"
+                        class="p-6 rounded-3xl bg-white dark:bg-[#111827] shadow-lg border border-slate-200/80 dark:border-slate-800 text-center space-y-4 hover:-translate-y-1 transition-all"
+                    >
+                        <div class="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-600 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-pink-500/25">
+                            {{ a.nombre.charAt(a.nombre.indexOf(' ') + 1) || 'A' }}
+                        </div>
+
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-900 dark:text-white leading-tight">
+                                {{ a.nombre }}
+                            </h4>
+                            <p class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold mt-1">
+                                {{ a.cargo }}
+                            </p>
+                            <span v-if="a.grado_academico" class="text-[11px] text-slate-400 block mt-0.5">
+                                {{ a.grado_academico }}
+                            </span>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 space-y-1">
+                            <div v-if="a.correo" class="truncate">{{ a.correo }}</div>
+                            <div v-if="a.telefono" class="font-mono text-[11px]">Telf: {{ a.telefono }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 5. COMUNICADOS OFICIALES Y PUBLICACIONES                       -->
+        <!-- ============================================================== -->
+        <section id="comunicados" class="py-16 sm:py-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <span class="text-xs font-black uppercase tracking-widest text-pink-600 dark:text-pink-400">
+                        Información en Tiempo Real
+                    </span>
+                    <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Comunicados, Avisos y Publicaciones
+                    </h3>
+                </div>
+
+                <div class="flex items-center gap-1.5 bg-white dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs font-bold">
+                    <button
+                        @click="actualizarFiltro('todos')"
+                        :class="['px-3 py-1.5 rounded-xl transition-all', filtroTipo === 'todos' ? 'bg-pink-500 text-white shadow-xs' : 'text-slate-500']"
+                    >
+                        Todos
+                    </button>
+                    <button
+                        @click="actualizarFiltro('Convocatoria')"
+                        :class="['px-3 py-1.5 rounded-xl transition-all', filtroTipo === 'Convocatoria' ? 'bg-pink-500 text-white shadow-xs' : 'text-slate-500']"
+                    >
+                        Convocatorias
+                    </button>
+                    <button
+                        @click="actualizarFiltro('Comunicado')"
+                        :class="['px-3 py-1.5 rounded-xl transition-all', filtroTipo === 'Comunicado' ? 'bg-pink-500 text-white shadow-xs' : 'text-slate-500']"
+                    >
+                        Comunicados
+                    </button>
+                    <button
+                        @click="actualizarFiltro('Noticia')"
+                        :class="['px-3 py-1.5 rounded-xl transition-all', filtroTipo === 'Noticia' ? 'bg-pink-500 text-white shadow-xs' : 'text-slate-500']"
+                    >
+                        Noticias
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div
+                    v-for="pub in publicaciones.filter(p => filtroTipo === 'todos' || p.tipo === filtroTipo)"
+                    :key="pub.id"
+                    class="p-6 rounded-3xl bg-white dark:bg-[#111827] shadow-xl border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between hover:border-pink-500/40 transition-all"
+                >
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <Tag
+                                :severity="pub.tipo === 'Convocatoria' ? 'danger' : (pub.tipo === 'Comunicado' ? 'info' : 'success')"
+                                :value="pub.tipo"
+                                rounded
+                            />
+                            <span class="text-xs text-slate-400 font-semibold">{{ pub.fecha || 'Reciente' }}</span>
+                        </div>
+
+                        <h4 class="font-bold text-sm text-slate-900 dark:text-white leading-snug">
+                            {{ pub.titulo }}
+                        </h4>
+
+                        <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-3 leading-relaxed">
+                            {{ pub.descripcion }}
+                        </p>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-400">{{ pub.autor || 'Dirección de Carrera' }}</span>
+                        <Button
+                            label="Leer Más"
+                            icon="pi pi-arrow-right"
+                            iconPos="right"
+                            text
+                            size="small"
+                            severity="primary"
+                            @click="verDetallePublicacion(pub)"
+                            class="!text-xs font-bold"
+                        />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 6. OFERTA ACADÉMICA / CARRERAS Y MALLAS                        -->
+        <!-- ============================================================== -->
+        <section id="carreras" class="py-16 sm:py-24 bg-gradient-to-b from-slate-100/70 to-slate-200/40 dark:from-[#0b0f19] dark:to-[#070b13] border-t border-slate-200/80 dark:border-slate-800/80">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                <div class="text-center max-w-2xl mx-auto space-y-2">
+                    <span class="text-xs font-black uppercase tracking-widest text-pink-600 dark:text-pink-400">
+                        Formación Profesional
+                    </span>
+                    <h3 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                        Programas Académicos Universitarios
+                    </h3>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                        Mallas curriculares organizadas con prerrequisitos formativos para garantizar tu titulación.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div
+                        v-for="c in carreras"
+                        :key="c.id"
+                        class="p-6 rounded-3xl bg-white dark:bg-[#111827] shadow-xl border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between"
+                    >
+                        <div class="space-y-3">
+                            <span class="px-3 py-1 rounded-xl text-xs font-mono font-black bg-pink-500/10 text-pink-600 dark:text-pink-400 border border-pink-500/20">
+                                {{ c.codigo }}
+                            </span>
+                            <h4 class="text-lg font-black text-slate-900 dark:text-white">
+                                {{ c.nombre }}
+                            </h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400">
+                                Plan de estudios estructurado en {{ c.total_niveles || 10 }} semestres académicos con menciones de especialidad.
+                            </p>
+                        </div>
+
+                        <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-400">{{ c.materias_count || 0 }} materias en malla</span>
+                            <Link
+                                :href="route('malla-curricular.index', { carrera_id: c.id })"
+                                class="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-pink-500 hover:text-white transition-colors"
+                            >
+                                Ver Malla
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================== -->
+        <!-- 7. FOOTER INSTITUCIONAL                                        -->
+        <!-- ============================================================== -->
+        <footer id="contacto" class="bg-[#111827] text-white pt-16 pb-12 border-t border-slate-800">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                    <div class="space-y-3 md:col-span-2">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-8 h-8 rounded-xl bg-pink-500 text-white flex items-center justify-center font-bold">
+                                <i class="pi pi-graduation-cap"></i>
+                            </div>
+                            <span class="font-black text-sm uppercase tracking-wider text-white">
+                                {{ institucion?.nombre || 'Facultad de Ciencia y Tecnología' }}
+                            </span>
+                        </div>
+                        <p class="text-xs text-slate-400 max-w-md leading-relaxed">
+                            Formando ingenieros y científicos computacionales líderes con excelencia ética, rigurosidad académica y compromiso con el desarrollo social.
+                        </p>
+                    </div>
+
+                    <div class="space-y-2 text-xs">
+                        <h5 class="font-black text-slate-200 uppercase tracking-widest text-[11px]">Contacto Central</h5>
+                        <div class="text-slate-400">{{ institucion?.direccion || 'Av. Sucre s/n, Campus Universitario' }}</div>
+                        <div class="text-slate-400 font-mono">Telf: {{ institucion?.telefono || '+591 2 2844177' }}</div>
+                        <div class="text-slate-400">Email: {{ institucion?.correo || 'contacto@academico.test' }}</div>
+                    </div>
+
+                    <div class="space-y-2 text-xs">
+                        <h5 class="font-black text-slate-200 uppercase tracking-widest text-[11px]">Accesos Rápidos</h5>
+                        <div><Link href="/login?tab=postular" class="text-pink-400 hover:underline">Postulación a Examen 2026-I</Link></div>
+                        <div><Link href="/login" class="text-slate-300 hover:underline">Ingreso al Sistema Docente / Estudiante</Link></div>
+                        <div><a href="#carreras" class="text-slate-300 hover:underline">Planes de Estudio</a></div>
+                    </div>
+                </div>
+
+                <div class="pt-8 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between text-xs text-slate-500 gap-4">
+                    <div>© 2026 {{ institucion?.nombre || 'Facultad Universitaria' }}. Todos los derechos reservados.</div>
+                    <div class="flex items-center gap-4">
+                        <span>Gestión Académica Oficial</span>
+                        <span>Campus Central</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        <!-- MODAL DETALLE DE COMUNICADO O NOTICIA -->
+        <Dialog
+            v-model:visible="modalPublicacionVisible"
+            :header="publicacionSeleccionada?.titulo || 'Detalle'"
+            modal
+            class="w-full max-w-xl"
+        >
+            <div v-if="publicacionSeleccionada" class="space-y-4 pt-2 text-xs">
+                <div class="flex items-center justify-between pb-2 border-b">
+                    <Tag :value="publicacionSeleccionada.tipo" severity="info" rounded />
+                    <span class="text-slate-400 font-semibold">{{ publicacionSeleccionada.fecha }}</span>
+                </div>
+
+                <p class="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
+                    {{ publicacionSeleccionada.contenido || publicacionSeleccionada.descripcion }}
+                </p>
+
+                <div class="text-[11px] text-slate-400">
+                    Emitido por: <strong>{{ publicacionSeleccionada.autor || 'Dirección de Carrera' }}</strong>
+                </div>
+            </div>
+
+            <template #footer>
+                <Button label="Cerrar" text severity="secondary" @click="modalPublicacionVisible = false" />
+            </template>
+        </Dialog>
     </div>
 </template>

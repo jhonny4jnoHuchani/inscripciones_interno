@@ -92,13 +92,21 @@ class MallaCurricularController extends Controller
         ]);
 
         $materia = Materia::findOrFail($validated['materia_id']);
-        $requisitoId = $validated['requisito_id'];
+        $requisito = Materia::findOrFail($validated['requisito_id']);
 
-        if ($materia->requisitos()->where('requisito_id', $requisitoId)->exists()) {
-            $materia->requisitos()->detach($requisitoId);
+        // Regla estricta: El pre-requisito debe ser obligatoriamente de un nivel/semestre inferior
+        if ($requisito->nivel >= $materia->nivel) {
+            return response()->json([
+                'success' => false,
+                'message' => "El pre-requisito ({$requisito->sigla} - Nivel {$requisito->nivel}) debe ser de un nivel estrictamente inferior al de la materia ({$materia->sigla} - Nivel {$materia->nivel}).",
+            ], 422);
+        }
+
+        if ($materia->requisitos()->where('requisito_id', $requisito->id)->exists()) {
+            $materia->requisitos()->detach($requisito->id);
             $action = 'detached';
         } else {
-            $materia->requisitos()->attach($requisitoId);
+            $materia->requisitos()->attach($requisito->id);
             $action = 'attached';
         }
 

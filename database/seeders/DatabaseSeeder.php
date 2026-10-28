@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             MateriaSeeder::class,
             DocenteSeeder::class,
             CursoSeeder::class,
+            PeriodoEvaluacionSeeder::class,
+            PortalWebSeeder::class,
             PostulanteEstudianteSeeder::class,
             InscripcionSeeder::class,
         ]);

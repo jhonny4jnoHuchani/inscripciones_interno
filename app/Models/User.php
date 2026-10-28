@@ -79,6 +79,11 @@ class User extends Authenticatable
         return $this->hasMany(Curso::class, 'docente_id');
     }
 
+    public function cursosDictados(): HasMany
+    {
+        return $this->hasMany(Curso::class, 'docente_id');
+    }
+
     /**
      * Cursos en los que participa como estudiante.
      */

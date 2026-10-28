@@ -46,6 +46,11 @@ class Inscripcion extends Model
         return $this->belongsTo(Curso::class, 'curso_id');
     }
 
+    public function calificacionesParciales(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CalificacionParcial::class, 'inscripcion_id');
+    }
+
     /**
      * Asienta la calificación final y actualiza el estado (Aprobado / Reprobado)
      * según la nota mínima de aprobación configurada en la materia.
@@ -61,5 +66,29 @@ class Inscripcion extends Model
         $this->save();
 
         return $this;
+    }
+
+    /**
+     * Recalcula la nota final ponderada en base a las calificaciones parciales.
+     */
+    public function recalcularNotaFinal(): self
+    {
+        $parciales = $this->calificacionesParciales()->with('periodoEvaluacion')->get();
+        if ($parciales->isEmpty()) {
+            return $this;
+        }
+
+        $sumaPonderada = 0;
+        $totalPonderacion = 0;
+
+        foreach ($parciales as $p) {
+            $ponderacion = $p->periodoEvaluacion?->ponderacion ?? 33.33;
+            $sumaPonderada += ($p->nota * ($ponderacion / 100));
+            $totalPonderacion += $ponderacion;
+        }
+
+        // Si la ponderación suma ~100 o normalizamos
+        $notaCalculada = round($sumaPonderada, 2);
+        return $this->asentarNota($notaCalculada);
     }
 }

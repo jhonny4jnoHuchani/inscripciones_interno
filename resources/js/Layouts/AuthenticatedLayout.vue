@@ -51,28 +51,73 @@ onMounted(() => {
     }
 });
 
-const menuItems = [
+const todosLosMenus = [
     {
         name: 'Dashboard',
         route: 'dashboard',
         icon: 'pi pi-th-large',
+        roles: ['Administrador', 'Director', 'Encargado de Kardex', 'Comisión Académica'],
     },
     {
         name: 'Malla Curricular',
         route: 'malla-curricular.index',
         icon: 'pi pi-sitemap',
+        roles: ['Administrador', 'Director', 'Docente', 'Estudiante', 'Encargado de Kardex', 'Comisión Académica'],
     },
     {
         name: 'Cursos y Paralelos',
         route: 'cursos.index',
         icon: 'pi pi-calendar',
+        roles: ['Administrador', 'Director', 'Encargado de Kardex'],
     },
     {
-        name: 'Admisiones y Kardex',
+        name: 'Docentes',
+        route: 'docentes.index',
+        icon: 'pi pi-users',
+        roles: ['Administrador', 'Director'],
+    },
+    {
+        name: 'Admisiones',
         route: 'admisiones.index',
         icon: 'pi pi-user-plus',
+        roles: ['Administrador', 'Director', 'Encargado de Kardex', 'Comisión Académica'],
+    },
+    {
+        name: 'Kardex Académico',
+        route: 'kardex.index',
+        icon: 'pi pi-id-card',
+        roles: ['Administrador', 'Director', 'Encargado de Kardex'],
+    },
+    {
+        name: 'Config. Académica',
+        route: 'configuracion-academica.index',
+        icon: 'pi pi-sliders-h',
+        roles: ['Administrador', 'Director'],
+    },
+    {
+        name: 'Portal Web',
+        route: 'portal-web.index',
+        icon: 'pi pi-globe',
+        roles: ['Administrador', 'Director'],
+    },
+    {
+        name: 'Mis Cursos',
+        route: 'mis-cursos.index',
+        icon: 'pi pi-book',
+        roles: ['Docente', 'Administrador'],
+    },
+    {
+        name: 'Mi Panel',
+        route: 'mi-panel.index',
+        icon: 'pi pi-graduation-cap',
+        roles: ['Estudiante', 'Administrador'],
     },
 ];
+
+const menuItems = computed(() => {
+    const rol = userRole.value;
+    return todosLosMenus.filter(item => !item.roles || item.roles.includes(rol));
+});
 
 // Profile dropdown state
 const dropdownPerfilAbierto = ref(false);

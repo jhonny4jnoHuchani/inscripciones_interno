@@ -16,6 +16,7 @@
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
+        <div id="p-license-host" style="display:none !important; visibility:hidden !important; pointer-events:none !important;"></div>
         @inertia
     </body>
 </html>
