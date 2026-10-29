@@ -24,7 +24,7 @@ class MisCursosController extends Controller
 
         // Cursos asignados al docente autenticado
         $cursos = Curso::with([
-            'materia:id,codigo,sigla,nombre,nivel,carrera_id',
+            'materia:id,sigla,nombre,nivel,carrera_id',
             'materia.carrera:id,codigo,nombre',
             'inscripciones.estudiante:id,name,ci,email',
             'inscripciones.calificacionesParciales',

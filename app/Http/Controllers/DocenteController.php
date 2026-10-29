@@ -27,7 +27,7 @@ class DocenteController extends Controller
             ->with([
                 'carrera:id,codigo,nombre',
                 'cursosDictados' => function ($q) {
-                    $q->with(['materia:id,codigo,sigla,nombre,nivel', 'inscripciones:id,curso_id'])
+                    $q->with(['materia:id,sigla,nombre,nivel', 'inscripciones:id,curso_id'])
                       ->withCount('inscripciones')
                       ->orderBy('gestion', 'desc');
                 },

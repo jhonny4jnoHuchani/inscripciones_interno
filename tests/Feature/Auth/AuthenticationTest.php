@@ -96,4 +96,26 @@ class AuthenticationTest extends TestCase
         $this->assertGuest();
         $response->assertRedirect('/');
     }
+
+    public function test_demo_accounts_can_authenticate(): void
+    {
+        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Docente', 'guard_name' => 'web']);
+        \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Estudiante', 'guard_name' => 'web']);
+
+        $this->seed(\Database\Seeders\DemoAccountsSeeder::class);
+
+        $docenteRes = $this->post('/login', [
+            'email' => 'docente1@academico.test',
+            'password' => 'password',
+        ]);
+        $docenteRes->assertRedirect('/mis-cursos');
+
+        $this->post('/logout');
+
+        $estudianteRes = $this->post('/login', [
+            'email' => 'estudiante1@academico.test',
+            'password' => 'password',
+        ]);
+        $estudianteRes->assertRedirect('/mi-panel');
+    }
 }

@@ -33,7 +33,7 @@ return new class extends Migration
             $table->string('observacion')->nullable();
             $table->timestamps();
 
-            $table->unique(['inscripcion_id', 'periodo_evaluacion_id']);
+            $table->unique(['inscripcion_id', 'periodo_evaluacion_id'], 'calif_parciales_insc_periodo_unique');
         });
     }
 

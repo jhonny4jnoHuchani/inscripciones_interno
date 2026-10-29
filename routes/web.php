@@ -8,8 +8,20 @@ use Inertia\Inertia;
 
 Route::get('/', [App\Http\Controllers\WebPublicaController::class, 'index'])->name('home');
 Route::post('/consulta-postulacion', [App\Http\Controllers\WebPublicaController::class, 'consultarPostulacion'])->name('consulta.postulacion');
+Route::post('/postulacion', [App\Http\Controllers\AdmisionController::class, 'storePostulante'])->name('admisiones.postulantes.store');
 
 Route::get('/dashboard', function () {
+    /** @var \App\Models\User $user */
+    $user = Illuminate\Support\Facades\Auth::user();
+
+    if ($user && $user->hasRole('Docente') && ! $user->hasRole('Administrador') && ! $user->hasRole('Director')) {
+        return redirect()->route('mis-cursos.index');
+    }
+
+    if ($user && $user->hasRole('Estudiante') && ! $user->hasRole('Administrador') && ! $user->hasRole('Director')) {
+        return redirect()->route('mi-panel.index');
+    }
+
     $totalPostulantes = \App\Models\User::whereNotNull('estado_admision')->count();
     $admitidos = \App\Models\User::where('estado_admision', 'Admitido')->count();
     $cursosActivos = \App\Models\Curso::where('gestion', '2026-I')->count();
@@ -85,6 +97,8 @@ Route::middleware('auth')->group(function () {
     // Gestión del Portal Web Institucional
     Route::get('/portal-web', [App\Http\Controllers\PortalWebAdminController::class, 'index'])->name('portal-web.index');
     Route::put('/portal-web/institucion', [App\Http\Controllers\PortalWebAdminController::class, 'updateInstitucion'])->name('portal-web.institucion.update');
+    Route::post('/portal-web/portadas', [App\Http\Controllers\PortalWebAdminController::class, 'storePortada'])->name('portal-web.portadas.store');
+    Route::delete('/portal-web/portadas/{portada}', [App\Http\Controllers\PortalWebAdminController::class, 'destroyPortada'])->name('portal-web.portadas.destroy');
     Route::post('/portal-web/publicaciones', [App\Http\Controllers\PortalWebAdminController::class, 'storePublicacion'])->name('portal-web.publicaciones.store');
     Route::delete('/portal-web/publicaciones/{publicacion}', [App\Http\Controllers\PortalWebAdminController::class, 'destroyPublicacion'])->name('portal-web.publicaciones.destroy');
     Route::post('/portal-web/autoridades', [App\Http\Controllers\PortalWebAdminController::class, 'storeAutoridad'])->name('portal-web.autoridades.store');

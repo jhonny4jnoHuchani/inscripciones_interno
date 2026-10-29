@@ -303,14 +303,14 @@ const consultarEstado = async () => {
                                     </button>
                                     <button
                                         type="button"
-                                        @click="cargarCredencialDemo('docente.calculo@academico.test')"
+                                        @click="cargarCredencialDemo('docente1@academico.test')"
                                         class="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-pink-500 hover:text-white transition-colors"
                                     >
                                         Docente
                                     </button>
                                     <button
                                         type="button"
-                                        @click="cargarCredencialDemo('estudiante.nivel1@academico.test')"
+                                        @click="cargarCredencialDemo('estudiante1@academico.test')"
                                         class="px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-pink-500 hover:text-white transition-colors"
                                     >
                                         Estudiante

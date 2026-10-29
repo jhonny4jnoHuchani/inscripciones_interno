@@ -1,58 +1,164 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 🎓 Sistema Académico UPEA — Plataforma de Gestión Académica Universitaria
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Plataforma integral de gestión universitaria desarrollada con **Laravel 11**, **Inertia.js v2**, **Vue 3**, **PrimeVue** y **Tailwind CSS**. Administra el ciclo de vida académico completo: admisiones, pre-requisitos de malla curricular, inscripciones regulares y extemporáneas, asignación docente de paralelos, registro de evaluaciones parciales y auditoría de kárdex con control de acceso basado en roles (**RBAC** con Spatie Permissions).
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 📋 Requisitos Previos
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Antes de configurar el entorno de desarrollo, asegúrate de contar con:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **PHP**: Versión `8.2` u `8.3` (con extensiones activas: `pdo_mysql`, `mbstring`, `openssl`, `curl`, `fileinfo`, `xml`, `bcmath`).
+- **Composer**: Versión `2.x` o superior.
+- **Node.js**: Versión `v18.x` o `v20.x` LTS.
+- **npm**: Versión `9.x` o superior.
+- **MySQL / MariaDB**: Versión `8.0+` o MariaDB `10.4+` (a través de XAMPP, Laragon, Docker o servicio local en el puerto `3306`).
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🚀 Paso a Paso: Configuración para Modo Desarrollador
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Sigue este procedimiento para instalar y poner en marcha el proyecto:
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
+### 1. Ubicarse en la carpeta del proyecto
+Abre tu terminal en la raíz del proyecto:
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+cd d:/TRABAJO/sistema-academico
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Instalar dependencias de PHP con Composer
+```bash
+composer install
+```
 
-## Contributing
+### 3. Instalar dependencias de Frontend con npm
+```bash
+npm install
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 4. Configurar el archivo de Variables de Entorno (`.env`)
+Si aún no existe el archivo `.env`, créalo a partir de la plantilla `.env.example`:
 
-## Code of Conduct
+En Windows (PowerShell):
+```powershell
+Copy-Item .env.example .env
+```
+O en Bash / CMD:
+```bash
+cp .env.example .env
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Genera la clave criptográfica única de la aplicación Laravel:
+```bash
+php artisan key:generate
+```
 
-## Security Vulnerabilities
+### 5. Configurar la Conexión a la Base de Datos en `.env`
+Abre el archivo `.env` y define la conexión a tu servidor MySQL local:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-## License
+> [!NOTE]
+> - Asegúrate de que la base de datos `laravel` (o el nombre que asignes en `DB_DATABASE`) exista en tu MySQL (puedes crearla con `CREATE DATABASE laravel;` en phpMyAdmin o MySQL CLI).
+> - Si usas XAMPP estándar, el usuario es `root` y la contraseña se deja vacía (`DB_PASSWORD=`).
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 🗄️ Migraciones y Poblado de Datos (Seeders)
+
+Para construir la estructura de tablas y cargar los datos maestros de prueba (roles, materias, docentes, cursos, calificaciones y cuentas demo):
+
+### Opción Recomendada: Migrar y Poblar en un solo comando
+```bash
+php artisan migrate:fresh --seed
+```
+
+### O ejecutar paso por paso:
+1. **Ejecutar migraciones de la base de datos:**
+   ```bash
+   php artisan migrate
+   ```
+2. **Ejecutar semilleros de datos (Seeders):**
+   ```bash
+   php artisan db:seed
+   ```
+
+El seeder inicializa automáticamente:
+- **Roles y Permisos**: Administrador, Director, Encargado de Kardex, Comisión Académica, Docente, Estudiante.
+- **Carreras**: Ingeniería de Sistemas (`SIS`), Informática (`INF`), Telecomunicaciones (`TEL`).
+- **Malla Curricular**: Niveles semestrales y asignaturas con dependencias de pre-requisitos.
+- **Cursos y Paralelos**: Gestión actual `2026-I`.
+- **Periodos de Evaluación**: 1er Parcial, 2do Parcial, Examen Final, 2da Instancia.
+- **Cuentas de Demostración**: Usuarios con historial académico y actas de notas listas para interactuar.
+
+---
+
+## 💻 ¿Cómo Ejecutar el Entorno de Trabajo en Desarrollo?
+
+El sistema requiere tanto el backend de Laravel (PHP) como el compilador de componentes Vue (Vite).
+
+### Opción 1: Comando Concurrente (Recomendado)
+Laravel 11 incluye soporte para ejecutar el servidor PHP y Vite al mismo tiempo en una sola terminal:
+```bash
+composer run dev
+```
+
+### Opción 2: En Dos Terminales Separadas
+Si prefieres ver los logs de cada proceso de manera independiente:
+
+- **Terminal 1 — Servidor Backend Laravel:**
+  ```bash
+  php artisan serve
+  ```
+  *Disponible en: [http://127.0.0.1:8000](http://127.0.0.1:8000)*
+
+- **Terminal 2 — Compilador Frontend Vite (Inertia + Vue 3):**
+  ```bash
+  npm run dev
+  ```
+  *Servidor de desarrollo Vite con Hot Module Replacement (HMR) en: [http://localhost:5173](http://localhost:5173)*
+
+---
+
+## 🔑 Cuentas de Acceso de Demostración (Seeders)
+
+Todas las cuentas demo utilizan la contraseña predeterminada: `password`
+
+| Rol | Correo Electrónico | CI | Acceso y Permisos |
+| :--- | :--- | :--- | :--- |
+| **Super Administrador** | `admin@academico.test` | `10000001` | Acceso total a todas las configuraciones y roles |
+| **Director de Carrera** | `director@academico.test` | `10000002` | Malla curricular, cursos, admisión y asignación docente |
+| **Directora Informática**| `director.informatica@academico.test` | `10000003` | Gestión de carrera Informática |
+| **Encargado de Kardex** | `kardex@academico.test` | `10000004` | Inscripción manual, certificados y kárdex |
+| **Docente Demo** | `docente1@academico.test` | `20009999` | Calificación de actas y listas de estudiantes |
+| **Estudiante Demo** | `estudiante1@academico.test` | `30009999` | Historial de materias, kárdex y notas parciales |
+
+---
+
+## 🧪 Pruebas, Formato y Construcción
+
+```bash
+# Ejecutar suite de pruebas con PHPUnit
+php artisan test
+
+# Dar formato al código PHP respetando estándares Laravel Pint
+vendor/bin/pint
+
+# Compilar assets frontend para producción
+npm run build
+```
+
+---
+
+## 🔗 Integración con el Ecosistema UPEA
+
+Este sistema académico se complementa con:
+1. **`upea-token-service`** (Puerto `3000`): Microservicio NestJS que valida tokens de seguridad OTP para acciones críticas y firmas de actas.
+2. **`upea-token-app`** (Puerto Web `8081`): Aplicación React Native móvil/web para generación de tokens dinámicos con Device Binding.

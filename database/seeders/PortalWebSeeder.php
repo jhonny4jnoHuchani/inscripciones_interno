@@ -17,7 +17,7 @@ class PortalWebSeeder extends Seeder
     public function run(): void
     {
         // 1. Institución
-        PortalInstitucion::firstOrCreate(
+        PortalInstitucion::updateOrCreate(
             ['sigla' => 'FAC-TEC'],
             [
                 'nombre' => 'Facultad de Ciencia y Tecnología Universitaria',
@@ -33,13 +33,14 @@ class PortalWebSeeder extends Seeder
             ]
         );
 
-        // 2. Portadas (Hero Slider)
+        // 2. Portadas (Hero Slider con imágenes en storage)
         $portadas = [
             [
                 'titulo' => 'Convocatoria Oficial: Examen de Admisión 2026-I',
                 'subtitulo' => 'Inicia tu formación profesional en Ingeniería de Sistemas, Informática y Telecomunicaciones. Postulaciones abiertas para el nuevo periodo.',
                 'badge' => 'Admisiones 2026-I Abiertas',
-                'link_url' => '/login?tab=postular',
+                'imagen' => 'portal/portadas/banner-admision.svg',
+                'link_url' => '#modal-postular',
                 'link_texto' => 'Postúlate al Examen Aquí',
                 'orden' => 1,
                 'activo' => true,
@@ -48,6 +49,7 @@ class PortalWebSeeder extends Seeder
                 'titulo' => 'Liderazgo en Ciencia, Algoritmos y Transformación Digital',
                 'subtitulo' => 'Laboratorios de última generación, mallas curriculares actualizadas y cuerpo docente con alta especialización de posgrado.',
                 'badge' => 'Excelencia Académica',
+                'imagen' => 'portal/portadas/banner-tecnologia.svg',
                 'link_url' => '#carreras',
                 'link_texto' => 'Ver Carreras y Mallas',
                 'orden' => 2,
@@ -57,7 +59,8 @@ class PortalWebSeeder extends Seeder
                 'titulo' => 'Proceso de Inscripción y Matrícula Semestral 2026',
                 'subtitulo' => 'Estudiantes regulares y docentes: el sistema de gestión académica se encuentra habilitado para control de notas y seguimiento curricular.',
                 'badge' => 'Gestión Académica en Línea',
-                'link_url' => '/login',
+                'imagen' => 'portal/portadas/banner-academico.svg',
+                'link_url' => '#modal-ingresar',
                 'link_texto' => 'Ingresar al Sistema',
                 'orden' => 3,
                 'activo' => true,
@@ -65,15 +68,16 @@ class PortalWebSeeder extends Seeder
         ];
 
         foreach ($portadas as $p) {
-            PortalPortada::firstOrCreate(['titulo' => $p['titulo']], $p);
+            PortalPortada::updateOrCreate(['titulo' => $p['titulo']], $p);
         }
 
-        // 3. Autoridades
+        // 3. Autoridades (con fotos de muestra en storage)
         $autoridades = [
             [
                 'nombre' => 'Ing. Carlos Mendoza Alarcón',
                 'cargo' => 'Director de Carrera - Ingeniería de Sistemas',
                 'grado_academico' => 'M.Sc. en Seguridad Informática y Redes',
+                'foto' => 'portal/autoridades/director-sistemas.svg',
                 'telefono' => '71550001',
                 'correo' => 'director@academico.test',
                 'orden' => 1,
@@ -83,6 +87,7 @@ class PortalWebSeeder extends Seeder
                 'nombre' => 'M.Sc. Patricia Zambrana Quispe',
                 'cargo' => 'Directora de Carrera - Ciencias de la Computación e Informática',
                 'grado_academico' => 'Doctora en Inteligencia Artificial y Machine Learning',
+                'foto' => 'portal/autoridades/directora-informatica.svg',
                 'telefono' => '71550002',
                 'correo' => 'director.informatica@academico.test',
                 'orden' => 2,
@@ -92,6 +97,7 @@ class PortalWebSeeder extends Seeder
                 'nombre' => 'Lic. Elena Arze Miranda',
                 'cargo' => 'Presidenta de la Comisión Académica y Evaluación Curricular',
                 'grado_academico' => 'Especialista en Acreditación Universitaria',
+                'foto' => 'portal/autoridades/presidenta-comision.svg',
                 'telefono' => '71550003',
                 'correo' => 'comision@academico.test',
                 'orden' => 3,
@@ -101,6 +107,7 @@ class PortalWebSeeder extends Seeder
                 'nombre' => 'Lic. Gonzalo Valenzuela Torrez',
                 'cargo' => 'Encargado de Kardex Académico Central y Admisiones',
                 'grado_academico' => 'Lic. en Administración Educativa',
+                'foto' => 'portal/autoridades/kardex-central.svg',
                 'telefono' => '71550004',
                 'correo' => 'kardex@academico.test',
                 'orden' => 4,
@@ -109,16 +116,17 @@ class PortalWebSeeder extends Seeder
         ];
 
         foreach ($autoridades as $a) {
-            PortalAutoridad::firstOrCreate(['nombre' => $a['nombre']], $a);
+            PortalAutoridad::updateOrCreate(['nombre' => $a['nombre']], $a);
         }
 
-        // 4. Publicaciones y Comunicados
+        // 4. Publicaciones y Comunicados (con imágenes ilustrativas en storage)
         $publicaciones = [
             [
                 'titulo' => 'Convocatoria Oficial al Examen de Admisión Periodo Académico 2026-I',
                 'tipo' => 'Convocatoria',
                 'descripcion' => 'Se invita a todos los bachilleres y aspirantes a postularse al examen de suficiencia académica para el ingreso a las carreras universitarias.',
                 'contenido' => 'La Dirección de Carrera y la Unidad de Kardex comunican que el registro de postulantes se encuentra disponible en línea. El examen presencial se llevará a cabo en las aulas del Campus Central.',
+                'imagen' => 'portal/publicaciones/convocatoria-admision.svg',
                 'fecha' => Carbon::now()->subDays(3),
                 'autor' => 'Dirección de Admisiones',
                 'activo' => true,
@@ -128,6 +136,7 @@ class PortalWebSeeder extends Seeder
                 'tipo' => 'Comunicado',
                 'descripcion' => 'Comunicado dirigido a todos los docentes titulares para el cumplimiento del plazo habilitado en el sistema académico.',
                 'contenido' => 'De acuerdo a la Resolución Académica vigente, las fechas de habilitación para el asentamiento de notas del Primer Ciclo concluyen según el calendario establecido en el módulo de Configuración Académica.',
+                'imagen' => 'portal/publicaciones/cronograma-notas.svg',
                 'fecha' => Carbon::now()->subDays(1),
                 'autor' => 'Kardex Académico',
                 'activo' => true,
@@ -137,6 +146,7 @@ class PortalWebSeeder extends Seeder
                 'tipo' => 'Noticia',
                 'descripcion' => 'Nuestros estudiantes de semestres avanzados obtuvieron los primeros lugares con proyectos de visión artificial e Internet de las Cosas (IoT).',
                 'contenido' => 'Más de 40 proyectos innovadores fueron presentados en los laboratorios de especialidad, demostrando la alta capacidad inventiva y técnica de la comunidad estudiantil.',
+                'imagen' => 'portal/publicaciones/feria-robotica.svg',
                 'fecha' => Carbon::now()->subDays(7),
                 'autor' => 'Comisión de Investigación',
                 'activo' => true,
@@ -146,6 +156,7 @@ class PortalWebSeeder extends Seeder
                 'tipo' => 'Comunicado',
                 'descripcion' => 'Los planes de estudio de las tres carreras han sido organizados con rigurosidad académica para optimizar el avance estudiantil.',
                 'contenido' => 'Cada estudiante puede verificar a través de su portal institucional las materias aprobadas y los requisitos obligatorios de semestres anteriores necesarios para su inscripción.',
+                'imagen' => 'portal/publicaciones/malla-curricular.svg',
                 'fecha' => Carbon::now()->subDays(10),
                 'autor' => 'Comisión Académica',
                 'activo' => true,
@@ -153,7 +164,7 @@ class PortalWebSeeder extends Seeder
         ];
 
         foreach ($publicaciones as $pub) {
-            PortalPublicacion::firstOrCreate(['titulo' => $pub['titulo']], $pub);
+            PortalPublicacion::updateOrCreate(['titulo' => $pub['titulo']], $pub);
         }
     }
 }

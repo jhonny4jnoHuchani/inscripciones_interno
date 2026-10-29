@@ -58,6 +58,10 @@ const props = defineProps({
 });
 
 const page = usePage();
+const esAdmin = computed(() => {
+    const rol = page.props.auth?.user?.role || (page.props.auth?.user?.roles && page.props.auth?.user?.roles[0]) || '';
+    return rol === 'Administrador';
+});
 
 // Filtros reactivos
 const busqueda = ref(props.filtros.buscar || '');
@@ -298,6 +302,7 @@ const guardarNuevoPermiso = () => {
 
                 <div class="flex items-center gap-2">
                     <Button
+                        v-if="esAdmin"
                         label="Roles y Permisos"
                         icon="pi pi-shield"
                         severity="secondary"

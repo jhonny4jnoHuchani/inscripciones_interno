@@ -90,4 +90,41 @@ class PortalWebTest extends TestCase
 
         $this->assertDatabaseHas('portal_autoridades', ['nombre' => 'Ing. Carlos Mendoza']);
     }
+
+    public function test_postulante_puede_registrarse_publicamente(): void
+    {
+        $carrera = Carrera::create(['nombre' => 'Telecomunicaciones', 'codigo' => 'TEL']);
+
+        $response = $this->post('/postulacion', [
+            'name' => 'Maria Aspirante',
+            'ci' => '87654321',
+            'email' => 'maria@aspirante.test',
+            'carrera_id' => $carrera->id,
+            'modalidad_admision' => 'Examen de Admisión',
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('users', [
+            'ci' => '87654321',
+            'email' => 'maria@aspirante.test',
+            'estado_admision' => 'Pendiente',
+        ]);
+    }
+
+    public function test_admin_puede_crear_portada(): void
+    {
+        $carrera = Carrera::create(['nombre' => 'Sistemas', 'codigo' => 'SIS']);
+        $admin = User::factory()->create(['carrera_id' => $carrera->id]);
+        $admin->assignRole('Administrador');
+
+        $this->actingAs($admin)->post('/portal-web/portadas', [
+            'titulo' => 'Nueva Portada 2026',
+            'subtitulo' => 'Subtítulo de prueba',
+            'badge' => 'Nuevo',
+            'link_texto' => 'Ver Más',
+            'orden' => 1,
+        ])->assertSessionHas('success');
+
+        $this->assertDatabaseHas('portal_portadas', ['titulo' => 'Nueva Portada 2026']);
+    }
 }

@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             PortalWebSeeder::class,
             PostulanteEstudianteSeeder::class,
             InscripcionSeeder::class,
+            DemoAccountsSeeder::class,
         ]);
     }
 }

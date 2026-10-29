@@ -187,4 +187,48 @@ class NuevosModulosAcademicosTest extends TestCase
         $this->assertEquals(85.0, (float) $inscripcion->fresh()->nota_final);
         $this->assertEquals('Aprobado', $inscripcion->fresh()->estado);
     }
+
+    public function test_listado_docentes_carga_correctamente_con_cursos_y_materias(): void
+    {
+        $carrera = Carrera::create(['nombre' => 'Sistemas', 'codigo' => 'SIS']);
+        $docente = User::factory()->create(['carrera_id' => $carrera->id]);
+        $docente->assignRole('Docente');
+
+        $materia = Materia::create(['carrera_id' => $carrera->id, 'nombre' => 'Programación', 'sigla' => 'SIS-101', 'nivel' => 1]);
+        Curso::create(['materia_id' => $materia->id, 'gestion' => '2026-I', 'paralelo' => 'A', 'docente_id' => $docente->id]);
+
+        $admin = User::factory()->create();
+        $admin->assignRole('Administrador');
+
+        $response = $this->actingAs($admin)->get('/docentes');
+        $response->assertOk();
+    }
+
+    public function test_docente_puede_ver_mis_cursos(): void
+    {
+        $carrera = Carrera::create(['nombre' => 'Sistemas', 'codigo' => 'SIS']);
+        $docente = User::factory()->create(['carrera_id' => $carrera->id]);
+        $docente->assignRole('Docente');
+
+        $materia = Materia::create(['carrera_id' => $carrera->id, 'nombre' => 'Base de Datos', 'sigla' => 'SIS-201', 'nivel' => 2]);
+        Curso::create(['materia_id' => $materia->id, 'gestion' => '2026-I', 'paralelo' => 'A', 'docente_id' => $docente->id]);
+
+        $response = $this->actingAs($docente)->get('/mis-cursos');
+        $response->assertOk();
+    }
+
+    public function test_estudiante_puede_ver_mi_panel(): void
+    {
+        $carrera = Carrera::create(['nombre' => 'Sistemas', 'codigo' => 'SIS']);
+        $estudiante = User::factory()->create(['carrera_id' => $carrera->id]);
+        $estudiante->assignRole('Estudiante');
+
+        $materia = Materia::create(['carrera_id' => $carrera->id, 'nombre' => 'Redes', 'sigla' => 'SIS-301', 'nivel' => 3]);
+        $curso = Curso::create(['materia_id' => $materia->id, 'gestion' => '2026-I', 'paralelo' => 'A']);
+        $estudiante->inscripciones()->create(['curso_id' => $curso->id, 'estado' => 'En Curso']);
+
+        $response = $this->actingAs($estudiante)->get('/mi-panel');
+        $response->assertOk();
+    }
 }
+

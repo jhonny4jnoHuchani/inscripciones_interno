@@ -7,12 +7,30 @@ import InputText from 'primevue/inputtext';
 const page = usePage();
 const user = computed(() => page.props.auth?.user || {});
 const userRole = computed(() => {
+    if (user.value.role) {
+        return user.value.role;
+    }
     if (user.value.roles && user.value.roles.length > 0) {
         return typeof user.value.roles[0] === 'string'
             ? user.value.roles[0]
             : user.value.roles[0].name;
     }
-    return 'Administrador';
+    return 'Estudiante';
+});
+
+const roleBadgeColor = computed(() => {
+    switch (userRole.value) {
+        case 'Administrador':
+            return 'bg-amber-500/20 text-amber-300 border-amber-500/30';
+        case 'Director':
+            return 'bg-pink-500/20 text-pink-300 border-pink-500/30';
+        case 'Docente':
+            return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30';
+        case 'Estudiante':
+            return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30';
+        default:
+            return 'bg-slate-500/20 text-slate-300 border-slate-500/30';
+    }
 });
 
 // Sidebar Mobile Toggle
@@ -169,7 +187,7 @@ const dropdownPerfilAbierto = ref(false);
                         <p class="text-xs font-bold text-white truncate">
                             {{ user.name }}
                         </p>
-                        <span class="inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold bg-pink-500/20 text-pink-300 border border-pink-500/30 uppercase tracking-wider">
+                        <span :class="['inline-block px-1.5 py-0.5 rounded text-[9px] font-semibold border uppercase tracking-wider', roleBadgeColor]">
                             {{ userRole }}
                         </span>
                     </div>

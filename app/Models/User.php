@@ -136,12 +136,14 @@ class User extends Authenticatable
     /**
      * Retorna true si tiene una inscripción en estado 'Aprobado' para esa materia.
      */
-    public function haAprobadoMateria(int|string $materia_id): bool
+    public function haAprobadoMateria(int|string|Materia $materia): bool
     {
+        $materiaId = $materia instanceof Materia ? $materia->id : $materia;
+
         return $this->inscripciones()
             ->where('estado', 'Aprobado')
-            ->whereHas('curso', function ($query) use ($materia_id) {
-                $query->where('materia_id', $materia_id);
+            ->whereHas('curso', function ($query) use ($materiaId) {
+                $query->where('materia_id', $materiaId);
             })
             ->exists();
     }

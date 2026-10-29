@@ -20,7 +20,7 @@ class MiPanelController extends Controller
 
         $user->load([
             'carrera:id,codigo,nombre,total_niveles',
-            'inscripciones.curso.materia:id,codigo,sigla,nombre,nivel',
+            'inscripciones.curso.materia:id,sigla,nombre,nivel',
             'inscripciones.curso.docente:id,name,email',
             'inscripciones.calificacionesParciales.periodoEvaluacion',
         ]);

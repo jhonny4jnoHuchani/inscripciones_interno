@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 import InputText from 'primevue/inputtext';
@@ -18,6 +18,13 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+});
+
+const page = usePage();
+const currentUser = computed(() => page.props.auth?.user || {});
+const esAdminODirector = computed(() => {
+    const rol = currentUser.value.role || (currentUser.value.roles && currentUser.value.roles[0]) || '';
+    return rol === 'Administrador' || rol === 'Director';
 });
 
 // Referencias del DOM para calcular flechas SVG
@@ -494,6 +501,7 @@ onUnmounted(() => {
                     </div>
 
                     <Button
+                        v-if="esAdminODirector"
                         icon="pi pi-plus"
                         label="Nueva Materia"
                         size="small"
@@ -585,6 +593,7 @@ onUnmounted(() => {
                 <!-- Botón gestionar requisitos + cerrar -->
                 <div class="flex items-center gap-2 self-end lg:self-center">
                     <Button
+                        v-if="esAdminODirector"
                         label="Gestionar Requisitos"
                         icon="pi pi-link"
                         size="small"
@@ -704,16 +713,17 @@ onUnmounted(() => {
                                     {{ getEtapaNivel(nivel).nombre }}
                                 </span>
                             </div>
-                            <Button
-                                icon="pi pi-plus"
-                                size="small"
-                                text
-                                rounded
-                                severity="secondary"
-                                title="Agregar materia en este nivel"
-                                @click="abrirModalNueva(nivel)"
-                                class="!w-8 !h-8 !p-0 hover:!bg-pink-500 hover:!text-white transition-colors"
-                            />
+                                <Button
+                                    v-if="esAdminODirector"
+                                    icon="pi pi-plus"
+                                    size="small"
+                                    text
+                                    rounded
+                                    severity="secondary"
+                                    title="Agregar materia en este nivel"
+                                    @click="abrirModalNueva(nivel)"
+                                    class="!w-8 !h-8 !p-0 hover:!bg-pink-500 hover:!text-white transition-colors"
+                                />
                         </div>
 
                         <!-- Lista de Tarjetas de Materia del Nivel -->
@@ -794,8 +804,8 @@ onUnmounted(() => {
                                         </span>
                                     </div>
 
-                                    <!-- Botones de Acción -->
-                                    <div class="flex items-center gap-1 opacity-90 group-hover:opacity-100">
+                                    <!-- Botones de Acción (Solo Admin / Director) -->
+                                    <div v-if="esAdminODirector" class="flex items-center gap-1 opacity-90 group-hover:opacity-100">
                                         <button
                                             @click="abrirModalRequisitos(materia, $event)"
                                             class="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors"
@@ -821,8 +831,9 @@ onUnmounted(() => {
                                 </div>
                             </div>
 
-                            <!-- Botón agregar al pie de columna -->
+                            <!-- Botón agregar al pie de columna (Solo Admin / Director) -->
                             <button
+                                v-if="esAdminODirector"
                                 @click="abrirModalNueva(nivel)"
                                 class="w-full py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-pink-500 dark:hover:border-pink-500 hover:bg-pink-50/30 text-slate-400 hover:text-pink-600 dark:hover:text-pink-400 text-xs font-bold transition-all flex items-center justify-center gap-1.5"
                             >

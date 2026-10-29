@@ -9,6 +9,7 @@ use App\Models\PortalPublicacion;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -61,6 +62,48 @@ class PortalWebAdminController extends Controller
     }
 
     /**
+     * Guarda una portada para el Hero Slider.
+     */
+    public function storePortada(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'titulo' => 'required|string|max:255',
+            'subtitulo' => 'nullable|string',
+            'badge' => 'nullable|string|max:100',
+            'link_url' => 'nullable|string|max:255',
+            'link_texto' => 'nullable|string|max:100',
+            'orden' => 'nullable|integer',
+            'activo' => 'boolean',
+            'imagen' => 'nullable|image|max:5120',
+        ]);
+
+        if ($request->hasFile('imagen')) {
+            $validated['imagen'] = $request->file('imagen')->store('portal/portadas', 'public');
+        }
+
+        $validated['orden'] = $validated['orden'] ?? ((PortalPortada::max('orden') ?? 0) + 1);
+        $validated['activo'] = $validated['activo'] ?? true;
+
+        PortalPortada::create($validated);
+
+        return back()->with('success', 'Portada registrada exitosamente.');
+    }
+
+    /**
+     * Elimina una portada.
+     */
+    public function destroyPortada(PortalPortada $portada): RedirectResponse
+    {
+        if ($portada->imagen && Storage::disk('public')->exists($portada->imagen)) {
+            Storage::disk('public')->delete($portada->imagen);
+        }
+
+        $portada->delete();
+
+        return back()->with('success', 'Portada eliminada.');
+    }
+
+    /**
      * Guarda una publicación o comunicado.
      */
     public function storePublicacion(Request $request): RedirectResponse
@@ -72,7 +115,12 @@ class PortalWebAdminController extends Controller
             'contenido' => 'nullable|string',
             'autor' => 'nullable|string|max:100',
             'fecha' => 'nullable|date',
+            'imagen' => 'nullable|image|max:5120',
         ]);
+
+        if ($request->hasFile('imagen')) {
+            $validated['imagen'] = $request->file('imagen')->store('portal/publicaciones', 'public');
+        }
 
         $validated['fecha'] = $validated['fecha'] ?? Carbon::now();
 
@@ -86,6 +134,10 @@ class PortalWebAdminController extends Controller
      */
     public function destroyPublicacion(PortalPublicacion $publicacion): RedirectResponse
     {
+        if ($publicacion->imagen && Storage::disk('public')->exists($publicacion->imagen)) {
+            Storage::disk('public')->delete($publicacion->imagen);
+        }
+
         $publicacion->delete();
 
         return back()->with('success', 'Publicación eliminada.');
@@ -102,7 +154,15 @@ class PortalWebAdminController extends Controller
             'grado_academico' => 'nullable|string|max:255',
             'correo' => 'nullable|email|max:100',
             'telefono' => 'nullable|string|max:50',
+            'orden' => 'nullable|integer',
+            'foto' => 'nullable|image|max:5120',
         ]);
+
+        if ($request->hasFile('foto')) {
+            $validated['foto'] = $request->file('foto')->store('portal/autoridades', 'public');
+        }
+
+        $validated['orden'] = $validated['orden'] ?? ((PortalAutoridad::max('orden') ?? 0) + 1);
 
         PortalAutoridad::create($validated);
 
@@ -114,6 +174,10 @@ class PortalWebAdminController extends Controller
      */
     public function destroyAutoridad(PortalAutoridad $autoridad): RedirectResponse
     {
+        if ($autoridad->foto && Storage::disk('public')->exists($autoridad->foto)) {
+            Storage::disk('public')->delete($autoridad->foto);
+        }
+
         $autoridad->delete();
 
         return back()->with('success', 'Autoridad eliminada.');
